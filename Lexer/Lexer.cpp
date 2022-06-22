@@ -189,12 +189,15 @@ str_esc:
             error("Unexpected escape symbol.");
     }
 
-// LESSER, GREATER
+// LESSER, NOT EQUAL
 lesser_eq:
     switch(symbol) {
         case '=':
             nextSymbol();
             return tok_lessequal;
+        case '>':
+            nextSymbol();
+            return tok_notequal;
         default:;
     }
     switch(symbol_type) {
@@ -202,6 +205,7 @@ lesser_eq:
             return tok_lesser;
     }
 
+// GREATER
 greater_eq:
     switch(symbol) {
         case '=':
