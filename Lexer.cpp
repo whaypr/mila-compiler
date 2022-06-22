@@ -61,11 +61,12 @@ int Lexer::gettok() {
     m_IdentifierStr = "";
     m_IntVal = m_FloatVal = 0;
 
-q_init:
+// INITIAL STATE
+init:
     switch (symbol) {
         case '{':
             nextSymbol();
-            goto q1;
+            goto comment;
         case '+':
             nextSymbol();
             return tok_plus;
@@ -80,63 +81,50 @@ q_init:
             return tok_div;
         case '<':
             nextSymbol();
-            goto q4;
+            goto lesser_eq;
         case '>':
             nextSymbol();
-            goto q6;
+            goto greater_eq;
         case ':':
             nextSymbol();
-            goto q5;
+            goto assign;
         case '.':
             m_FloatVal = 0;
             type = tok_numberFloat;
             nextSymbol();
-            goto q3rr;
+            goto pre_float;
         default:;
     }
     switch (symbol_type) {
         case WHITE_SPACE:
             nextSymbol();
-            goto q_init;
+            goto init;
         case END:
             return tok_eof;
         case LETTER:
             m_IdentifierStr += symbol;
             nextSymbol();
-            goto q2;
+            goto ident;
         case NUMBER:
             m_IntVal = symbol - '0';
             if (m_IntVal == 0)
                 base = 8;
             type = tok_numberInt;
             nextSymbol();
-            goto q3dx;
+            goto pre_num;
         default:
             error("Invalid symbol.");
     }
 
-q3dx:
-    switch (symbol) {
-        case '.':
-            m_FloatVal = m_IntVal;
-            type = tok_numberFloat;
-            nextSymbol();
-            goto q3r;
-        case 'x':
-        case 'X':
-            base = 16;
-            nextSymbol();
-    }
-    goto q3;
-
-q1:
+// COMMENTS
+comment:
     switch(symbol) {
         case '}':
             nextSymbol();
-            goto q_init;
+            goto init;
         case '\\':
             nextSymbol();
-            goto q11;
+            goto comment_esc;
         default:;
     }
     switch(symbol_type) {
@@ -144,35 +132,87 @@ q1:
             error("Uneexpected end of file in a comment.");
         default:
             nextSymbol();
-            goto q1;
+            goto comment;
     }
 
-q11:
+comment_esc:
     switch(symbol) {
         case '}':
-            nextSymbol();
-            goto q1;
         case '\\':
             nextSymbol();
-            goto q1;
+            goto comment;
         default:;
             error("Unexpected escape symbol \\.");
     }
 
-q2:
+// LESSER, GREATER
+lesser_eq:
+    switch(symbol) {
+        case '=':
+            nextSymbol();
+            return tok_lessequal;
+        default:;
+    }
+    switch(symbol_type) {
+        default:
+            return tok_lesser;
+    }
+
+greater_eq:
+    switch(symbol) {
+        case '=':
+            nextSymbol();
+            return tok_greaterequal;
+        default:;
+    }
+    switch(symbol_type) {
+        default:
+            return tok_greater;
+    }
+
+// ASSIGN
+assign:
+    switch(symbol) {
+        case '=':
+            nextSymbol();
+            return tok_assign;
+        default:;
+    }
+    switch(symbol_type) {
+        default:
+            error("Expected \'=\'.");
+    }
+
+// IDENTIFIERS
+ident:
     switch(symbol_type) {
         case LETTER:
         case NUMBER:
             m_IdentifierStr += symbol;
             nextSymbol();
-            goto q2;
+            goto ident;
         default:
             if (keywords.find(m_IdentifierStr) == keywords.end())
                 return tok_identifier;
             return keywords[m_IdentifierStr];
     }
 
-q3:
+// NUMBERS
+pre_num:
+    switch (symbol) {
+        case '.':
+            m_FloatVal = m_IntVal;
+            type = tok_numberFloat;
+            nextSymbol();
+            goto num_float;
+        case 'x':
+        case 'X':
+            base = 16;
+            nextSymbol();
+    }
+    goto num;
+
+num:
     switch(symbol) {
         case '.':
             if (base != 10)
@@ -181,7 +221,7 @@ q3:
             m_FloatVal = (float)m_IntVal;
             type = tok_numberInt;
             nextSymbol();
-            goto q3r;
+            goto num_float;
     }
     switch(symbol_type) {
         case NUMBER:
@@ -198,64 +238,28 @@ q3:
 
             m_IntVal = base * m_IntVal + digit; 
             nextSymbol();
-            goto q3;
+            goto num;
         default:
             return type;
     }
 
-q3rr:
+pre_float:
     switch(symbol_type) {
         case NUMBER:
-            goto q3r;
+            goto num_float;
         default:
             error("Decimal point is not a number.");
     }
 
-q3r:
+num_float:
     switch(symbol_type) {
         case NUMBER:
             digit = (symbol - '0');
             m_FloatVal += ((float)digit)/divider;
             divider *= 10;
             nextSymbol();
-            goto q3r;
+            goto num_float;
         default:
             return tok_numberFloat;
-    }
-
-q4:
-    switch(symbol) {
-        case '=':
-            nextSymbol();
-            return tok_lessequal;
-        default:;
-    }
-    switch(symbol_type) {
-        default:
-            return tok_lesser;
-    }
-
-q5:
-    switch(symbol) {
-        case '=':
-            nextSymbol();
-            return tok_assign;
-        default:;
-    }
-    switch(symbol_type) {
-        default:
-            error("Expected \'=\'.");
-    }
-
-q6:
-    switch(symbol) {
-        case '=':
-            nextSymbol();
-            return tok_greaterequal;
-        default:;
-    }
-    switch(symbol_type) {
-        default:
-            return tok_greater;
     }
 }
