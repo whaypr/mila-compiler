@@ -1,4 +1,4 @@
-#include "../Lexer.hpp"
+#include "../Lexer/Lexer.hpp"
 #include <map>
 
 
@@ -9,7 +9,7 @@ std::map<int, std::string> symbTable = {
     {tok_comma, "COMMA"},
     {tok_identifier, "IDENT"},
     {tok_intLiteral, "INT_LITERAL"},
-    {tok_floatLiteral, "FLOAT_LITERAL"},
+    {tok_realLiteral, "REAL_LITERAL"},
     {tok_stringLiteral, "STRING_LITERAL"},
     {tok_begin, "kwBEGIN"},
     {tok_end, "kwEND"},
@@ -25,7 +25,7 @@ std::map<int, std::string> symbTable = {
     {tok_exit, "kwEXIT"},
     {tok_var, "kwVAR"},
     {tok_integer, "kwINTEGER"},
-    {tok_float, "kwFLOAT"},
+    {tok_real, "kwFLOAT"},
     {tok_for, "kwFOR"},
     {tok_do, "kwDO"},
     {tok_readln, "kwREADLN"},
@@ -33,12 +33,12 @@ std::map<int, std::string> symbTable = {
     {tok_writeln, "kwWRITELN"},
     {tok_plus, "opPLUS"},
     {tok_minus, "opMINUS"},
-    {tok_multiply, "opMULTIPLY"},
-    {tok_lesser, "opLESSER"},
-    {tok_greater, "opGREATER"},
+    {tok_star, "opSTAR"},
+    {tok_lt, "opLESSER"},
+    {tok_gt, "opGREATER"},
     {tok_notequal, "opNOT_EQUAL"},
-    {tok_lessequal, "opLESS_EQUAL"},
-    {tok_greaterequal, "opGREAT_EQUAL"},
+    {tok_le, "opLESS_EQUAL"},
+    {tok_ge, "opGREAT_EQUAL"},
     {tok_assign, "opASSIGN"},
     {tok_equal, "opASSIGN_CONST"},
     {tok_or, "opOR"},
@@ -50,8 +50,8 @@ std::map<int, std::string> symbTable = {
     {tok_to, "TO"},
     {tok_downto, "DOWNTO"},
     {tok_array, "ARRAY"},
-    {tok_parenth_left, "PARENTH_LEFT"},
-    {tok_parenth_right, "PARENTH_RIGHT"},
+    {tok_lparen, "PARENTH_LEFT"},
+    {tok_rparen, "PARENTH_RIGHT"},
     {tok_semicolon, "SEMICOLON"}
 };
 
@@ -66,8 +66,8 @@ void printSymb(Lexer & lexer, int token) {
    case tok_intLiteral:
       std::cout << ", " << lexer.intVal();
       break;
-   case tok_floatLiteral:
-      std::cout << ", " << lexer.floatVal();
+   case tok_realLiteral:
+      std::cout << ", " << lexer.realVal();
       break;
    case tok_stringLiteral:
       std::cout << ", '" << lexer.stringVal() << "'";

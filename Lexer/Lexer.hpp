@@ -12,79 +12,80 @@
  */
 enum Token {
     tok_eof =           -1,
-    tok_dot =           -114,
-    tok_colon =         -115,
-    tok_comma =         -116,
+    tok_dot =           -2,
+    tok_colon =         -3,
+    tok_comma =         -4,
 
     // numbers and identifiers
-    tok_identifier =    -2,
-    tok_intLiteral =    -3,
-    tok_floatLiteral =  -100,
-    tok_stringLiteral = -117,
+    tok_identifier =    -5,
+    tok_intLiteral =    -6,
+    tok_realLiteral =   -7,
+    tok_stringLiteral = -8,
 
     // keywords
-    tok_program =       -13,
+    tok_program =       -9,
 
-    tok_procedure =     -7,
-    tok_function =      -9,
-    tok_forward =       -8,
-    tok_exit =          -15,
+    tok_procedure =     -10,
+    tok_function =      -11,
+    tok_forward =       -12,
+    tok_exit =          -13,
 
-    tok_begin =         -4,
-    tok_end =           -5,
+    tok_begin =         -14,
+    tok_end =           -15,
 
-    tok_const =         -6,
-    tok_var =           -16,
+    tok_const =         -16,
+    tok_var =           -17,
 
-    tok_integer =       -17,
-    tok_float =         -101,
+    tok_integer =       -18,
+    tok_real =          -19,
+    tok_string =        -20,
 
-    tok_if =            -10,
-    tok_then =          -11,
-    tok_else =          -12,
+    tok_if =            -21,
+    tok_then =          -22,
+    tok_else =          -23,
 
-    tok_while =         -14,
-    tok_for =           -18,
-    tok_do =            -19,
+    tok_while =         -24,
+    tok_for =           -25,
+    tok_do =            -26,
 
-    tok_readln =        -102,
-    tok_write =         -103,
-    tok_writeln =       -104,
+    tok_readln =        -27,
+    tok_write =         -28,
+    tok_writeln =       -29,
 
     // unary operators
-    tok_not =           -27,
+    tok_not =           -30,
 
     //binary operators
-    tok_assign =        -23,
-    tok_equal =         -113,
+    tok_assign =        -31,
+    tok_equal =         -32,
 
-    tok_plus =          -105,
-    tok_minus =         -106,
-    tok_multiply =      -107,
-    tok_div =           -26,
-    tok_mod =           -25,
+    tok_plus =          -33,
+    tok_minus =         -34,
+    tok_star =          -35,
+    tok_div =           -36,
+    tok_mod =           -37,
 
-    tok_lesser =        -108,
-    tok_greater =       -109,
-    tok_lessequal =     -21,
-    tok_greaterequal =  -22,
-    tok_notequal =      -20,
+    tok_lt =            -38,
+    tok_gt =            -39,
+    tok_le =            -40,
+    tok_ge =            -41,
+    tok_notequal =      -42,
 
-    tok_or =            -24,
-    tok_and =           -28,
-    tok_xor =           -29,
+    tok_or =            -43,
+    tok_and =           -44,
+    tok_xor =           -45,
 
     // keywords in for loop
-    tok_to =            -30,
-    tok_downto =        -31,
+    tok_to =            -46,
+    tok_downto =        -47,
 
     // keywords for array
-    tok_array =         -32,
+    tok_array =         -48,
 
     // blocks
-    tok_parenth_left =  -110,
-    tok_parenth_right = -111,
-    tok_semicolon =     -112
+    tok_lparen =        -49,
+    tok_rparen =        -50,
+    tok_semicolon =     -51
 };
 
 
@@ -93,24 +94,24 @@ public:
     Lexer() = default;
     ~Lexer() = default;
 
-    int nextToken();
+    Token nextToken();
 
-    const std::string& identifierStr() const { return this->m_IdentifierStr; }
-    int intVal() { return this->m_IntVal; }
-    float floatVal() { return this->m_FloatVal; }
+    const std::string& identifierStr() const { return this->m_identifierStr; }
+    int intVal() { return this->m_intVal; }
+    float realVal() { return this->m_realVal; }
     std::string stringVal() { return this->m_stringVal; }
 
     void nextSymbol();
 
 private:
-    std::string m_IdentifierStr;
-    int m_IntVal;
-    float m_FloatVal;
+    std::string m_identifierStr;
+    int m_intVal;
+    float m_realVal;
     std::string m_stringVal;
 
     static std::map<std::string, Token> keywords;
 
-    typedef enum {LETTER, NUMBER, END, WHITE_SPACE, NO_TYPE} InputCharType;
+    typedef enum {LETTER, NUMBER, UNDERSCORE, END, WHITE_SPACE, NO_TYPE} InputCharType;
     int symbol; // input symbol
     InputCharType symbol_type; // input symbol type
 };
