@@ -1,13 +1,16 @@
-#include "Parser.hpp"
+#include "Parser/Parser.hpp"
+#include <iostream>
+#include <string>
 
-// Use tutorials in: https://llvm.org/docs/tutorial/
 
-int main (int argc, char *argv[])
-{
+int main (int argc, char *argv[]) {
     Parser parser;
 
-    if (!parser.Parse()) {
-        return 1;
+    try {
+        parser.Parse();
+        std::cout << "Parsed successfully" << std::endl;
+    } catch (std::string msg) {
+        std::cout << msg << std::endl;
     }
 
     return 0;

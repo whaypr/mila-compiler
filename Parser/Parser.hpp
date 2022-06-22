@@ -1,7 +1,8 @@
 #ifndef PJPPROJECT_PARSER_HPP
 #define PJPPROJECT_PARSER_HPP
 
-#include "Lexer.hpp"
+#include "../Lexer/Lexer.hpp"
+#include "Descent.hpp"
 
 class Parser {
 public:
@@ -13,8 +14,9 @@ public:
 private:
     int getNextToken();
 
-    Lexer m_Lexer;                   // lexer is used to read tokens
-    int CurTok;                      // to keep the current token
+    Descent descent;
+    Lexer lexer;                     // lexer is used to read tokens
+    Token lookahead;                 // to keep the current token
 };
 
 #endif //PJPPROJECT_PARSER_HPP
