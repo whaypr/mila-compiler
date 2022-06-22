@@ -3,17 +3,22 @@
 
 #include <iostream>
 
+
 class Lexer {
 public:
     Lexer() = default;
     ~Lexer() = default;
 
     int gettok();
+
     const std::string& identifierStr() const { return this->m_IdentifierStr; }
-    int numVal() { return this->m_NumVal; }
+    int intVal() { return this->m_IntVal; }
+    float floatVal() { return this->m_FloatVal; }
+
 private:
     std::string m_IdentifierStr;
-    int m_NumVal;
+    int m_IntVal;
+    float m_FloatVal;
 };
 
 
@@ -22,29 +27,41 @@ private:
  * Here are all valid tokens:
  */
 enum Token {
-    tok_eof =           -1,
+    tok_eof =           -1, //
 
     // numbers and identifiers
-    tok_identifier =    -2,
-    tok_number =        -3,
+    tok_identifier =    -2, //
+    tok_numberInt =        -3, //
+    tok_numberFloat = -100,
 
     // keywords
-    tok_begin =         -4,
-    tok_end =           -5,
-    tok_const =         -6,
-    tok_procedure =     -7,
+    tok_begin =         -4, //
+    tok_end =           -5, //
+    tok_const =         -6, //
+    tok_procedure =     -7, //
     tok_forward =       -8,
-    tok_function =      -9,
-    tok_if =            -10,
-    tok_then =          -11,
-    tok_else =          -12,
-    tok_program =       -13,
-    tok_while =         -14,
-    tok_exit =          -15,
-    tok_var =           -16,
-    tok_integer =       -17,
-    tok_for =           -18,
-    tok_do =            -19,
+    tok_function =      -9, //
+    tok_if =            -10, //
+    tok_then =          -11, //
+    tok_else =          -12, //
+    tok_program =       -13, //
+    tok_while =         -14, //
+    tok_exit =          -15, //
+    tok_var =           -16, //
+    tok_integer =       -17, //
+    tok_float = -101,
+    tok_for =           -18, //
+    tok_do =            -19, //
+    tok_readln = 102, //
+    tok_write = 103, //
+    tok_writeln = 104, //
+
+    // 1-character operators
+    tok_plus = -105, //
+    tok_minus = -106, //
+    tok_multiply = -107, //
+    tok_lesser = -108,
+    tok_greater = -109,
 
     // 2-character operators
     tok_notequal =      -20,
@@ -54,8 +71,8 @@ enum Token {
     tok_or =            -24,
 
     // 3-character operators (keywords)
-    tok_mod =           -25,
-    tok_div =           -26,
+    tok_mod =           -25, //
+    tok_div =           -26, //
     tok_not =           -27,
     tok_and =           -28,
     tok_xor =           -29,
@@ -65,7 +82,20 @@ enum Token {
     tok_downto =        -31,
 
     // keywords for array
-    tok_array =         -32
+    tok_array =         -32,
+
+    // blocks
+    tok_parenth_left = -110, //
+    tok_parenth_right = -111, //
 };
+
+
+void nextSymbol();
+
+
+typedef enum {LETTER, NUMBER, END, WHITE_SPACE, NO_TYPE} InputCharType;
+
+static int symbol; // input symbol
+static InputCharType symbol_type; // input symbol type
 
 #endif //PJPPROJECT_LEXER_HPP
