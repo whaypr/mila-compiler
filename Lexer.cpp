@@ -2,7 +2,13 @@
 #include <map>
 
 
-std::map<std::string, Token> keywords = {
+void error(std::string text) {
+   std::cout << "\n" << text << std::endl;
+   exit(1);
+}
+
+
+std::map<std::string, Token> Lexer::keywords = {
     {"begin", tok_begin},
     {"end", tok_end},
     {"const", tok_const},
@@ -19,15 +25,17 @@ std::map<std::string, Token> keywords = {
     {"integer", tok_integer},
     {"float", tok_float},
     {"for", tok_for},
-    {"do", tok_do}
+    {"do", tok_do},
+    {"div", tok_div},
+    {"mod", tok_mod},
 };
 
 
-void nextSymbol() {
+void Lexer::nextSymbol() {
     symbol = getchar();
 
     // Set type
-    if (isalpha(symbol))
+    if (isalpha(symbol) || symbol == '_')
         symbol_type = LETTER;
     else if (isdigit(symbol))
         symbol_type = NUMBER;
@@ -40,25 +48,21 @@ void nextSymbol() {
 }
 
 
-void error(std::string text) {
-   std::cout << "\n" << text << std::endl;
-   exit(1);
-}
-
-
 /**
  * @brief Function to return the next token from standard input
  *
  * the variable 'm_IdentifierStr' is set there in case of an identifier,
- * the variable 'm_IntVal' is set there in case of a number.
+ * the variable 'm_intVal' is set there in case of an integer literal.
+ * the variable 'm_floatVal' is set there in case of a float literal.
+ * the variable 'm_stringVal' is set there in case of a string literal.
  */
-int Lexer::gettok() {
+int Lexer::nextToken() {
     int type;
     int base = 10;
     int divider = 10;
     int digit;
 
-    m_IdentifierStr = "";
+    m_IdentifierStr = m_stringVal = "";
     m_IntVal = m_FloatVal = 0;
 
 // INITIAL STATE
@@ -67,6 +71,15 @@ init:
         case '{':
             nextSymbol();
             goto comment;
+        case '(':
+            nextSymbol();
+            return tok_parenth_left;
+        case ')':
+            nextSymbol();
+            return tok_parenth_right;
+        case ';':
+            nextSymbol();
+            return tok_semicolon;
         case '+':
             nextSymbol();
             return tok_plus;
@@ -76,23 +89,37 @@ init:
         case '*':
             nextSymbol();
             return tok_multiply;
-        case '/':
-            nextSymbol();
-            return tok_div;
         case '<':
             nextSymbol();
             goto lesser_eq;
         case '>':
             nextSymbol();
             goto greater_eq;
+        case '=':
+            nextSymbol();
+            return tok_equal;
         case ':':
             nextSymbol();
-            goto assign;
-        case '.':
-            m_FloatVal = 0;
-            type = tok_numberFloat;
+            goto colon;
+        case ',':
             nextSymbol();
-            goto pre_float;
+            return tok_comma;;
+        case '$':
+            base = 16;
+            type = tok_intLiteral;
+            nextSymbol();
+            goto nint;
+        case '&':
+            base = 8;
+            type = tok_intLiteral;
+            nextSymbol();
+            goto nint;
+        case '.':
+            nextSymbol();
+            goto dot;
+        case '\'':
+            nextSymbol();
+            goto str;
         default:;
     }
     switch (symbol_type) {
@@ -107,11 +134,9 @@ init:
             goto ident;
         case NUMBER:
             m_IntVal = symbol - '0';
-            if (m_IntVal == 0)
-                base = 8;
-            type = tok_numberInt;
+            type = tok_intLiteral;
             nextSymbol();
-            goto pre_num;
+            goto nint;
         default:
             error("Invalid symbol.");
     }
@@ -122,27 +147,46 @@ comment:
         case '}':
             nextSymbol();
             goto init;
-        case '\\':
-            nextSymbol();
-            goto comment_esc;
         default:;
     }
     switch(symbol_type) {
         case END:
-            error("Uneexpected end of file in a comment.");
+            error("Unexpected end of file in a comment.");
         default:
             nextSymbol();
             goto comment;
     }
 
-comment_esc:
+// STRINGS
+str:
+    switch(symbol) {
+        case '\'':
+            nextSymbol();
+            return tok_stringLiteral;
+        case '\\':
+            nextSymbol();
+            goto str_esc;
+        default:
+            m_stringVal += symbol;
+            nextSymbol();
+            goto str;
+    }
+    switch(symbol_type) {
+        case END:
+            error("Unexpected end of file in a string literal.");
+        default:
+            nextSymbol();
+            goto str;
+    }
+
+str_esc:
     switch(symbol) {
         case '}':
         case '\\':
             nextSymbol();
-            goto comment;
+            goto str;
         default:;
-            error("Unexpected escape symbol \\.");
+            error("Unexpected escape symbol.");
     }
 
 // LESSER, GREATER
@@ -170,17 +214,19 @@ greater_eq:
             return tok_greater;
     }
 
-// ASSIGN
-assign:
+// COLON, ASSIGN
+colon:
     switch(symbol) {
         case '=':
             nextSymbol();
             return tok_assign;
-        default:;
+        default:
+            nextSymbol();
+            return tok_colon;
     }
     switch(symbol_type) {
         default:
-            error("Expected \'=\'.");
+            error("Expected '='.");
     }
 
 // IDENTIFIERS
@@ -188,6 +234,7 @@ ident:
     switch(symbol_type) {
         case LETTER:
         case NUMBER:
+        case '_':
             m_IdentifierStr += symbol;
             nextSymbol();
             goto ident;
@@ -198,30 +245,16 @@ ident:
     }
 
 // NUMBERS
-pre_num:
-    switch (symbol) {
-        case '.':
-            m_FloatVal = m_IntVal;
-            type = tok_numberFloat;
-            nextSymbol();
-            goto num_float;
-        case 'x':
-        case 'X':
-            base = 16;
-            nextSymbol();
-    }
-    goto num;
-
-num:
+nint:
     switch(symbol) {
         case '.':
             if (base != 10)
                 error("Decimal numbers only supported in base 10!");
 
             m_FloatVal = (float)m_IntVal;
-            type = tok_numberInt;
+            type = tok_floatLiteral;
             nextSymbol();
-            goto num_float;
+            goto nfloat;
     }
     switch(symbol_type) {
         case NUMBER:
@@ -234,32 +267,33 @@ num:
                 digit = (symbol - '0');
 
             if (digit >= base)
-                error("Digit not allowed in this base!");
+                error("This digit is not allowed in this base!");
 
             m_IntVal = base * m_IntVal + digit; 
             nextSymbol();
-            goto num;
+            goto nint;
         default:
             return type;
     }
 
-pre_float:
+dot:
     switch(symbol_type) {
         case NUMBER:
-            goto num_float;
+            type = tok_floatLiteral;
+            goto nfloat;
         default:
-            error("Decimal point is not a number.");
+            return tok_dot;
     }
 
-num_float:
+nfloat:
     switch(symbol_type) {
         case NUMBER:
             digit = (symbol - '0');
-            m_FloatVal += ((float)digit)/divider;
+            m_FloatVal += ( (float)digit ) / divider;
             divider *= 10;
             nextSymbol();
-            goto num_float;
+            goto nfloat;
         default:
-            return tok_numberFloat;
+            return tok_floatLiteral;
     }
 }
