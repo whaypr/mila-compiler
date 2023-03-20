@@ -1,7 +1,12 @@
 #!/bin/bash
-cd samples
-for i in *.mila ; do
+
+SAMPLES="$1"
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+MILA="$SCRIPT_DIR/mila"
+
+for i in "$SAMPLES"/*.mila ; do
   j="${i%%.*}"
-  echo ../mila "$i" -o "$j"
-  ../mila "$i" -o "$j"
+  echo mila "$i" -o "$j"
+  "$MILA" "$i" -o "$j"
 done

@@ -2,14 +2,21 @@ CXX      = g++
 CXXFLAGS = -Wall -pedantic -g
 LIBS     = 
 
-OUT      = exec
+TARGET   = mila
+BUILDDIR = build
+
+SRCS := $(shell find compiler/ -name '*.cpp')
 
 
-exec: main.cpp Lexer/Lexer.cpp Parser/Parser.cpp Parser/Descent.cpp
-	$(CXX) $(CXXFLAGS) $^ -o $(OUT) $(LIBS)
+all: $(TARGET)
 
-run: $(OUT)
-	./$(OUT)
+$(TARGET): $(SRCS) | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) $^ -o $(BUILDDIR)/$@ $(LIBS)
+
+$(BUILDDIR):
+	mkdir $(BUILDDIR)
 
 clean:
-	rm -f $(OUT)
+	rm -rf $(BUILDDIR)
+
+.PHONY: all clean

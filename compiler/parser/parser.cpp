@@ -1,5 +1,5 @@
-#include "Parser.hpp"
-#include "Descent.hpp"
+#include "parser.hpp"
+#include "descent.hpp"
 
 Parser::Parser()
     : descent(lexer, lookahead)

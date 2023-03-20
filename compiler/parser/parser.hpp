@@ -1,8 +1,8 @@
 #ifndef PJPPROJECT_PARSER_HPP
 #define PJPPROJECT_PARSER_HPP
 
-#include "../Lexer/Lexer.hpp"
-#include "Descent.hpp"
+#include "../lexer/lexer.hpp"
+#include "descent.hpp"
 
 class Parser {
 public:

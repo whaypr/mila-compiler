@@ -1,4 +1,4 @@
-#include "../Lexer/Lexer.hpp"
+#include "../compiler/lexer/lexer.hpp"
 #include <map>
 
 
