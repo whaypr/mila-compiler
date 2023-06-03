@@ -1,6 +1,5 @@
 #!/bin/bash
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-PROJECT_DIR=$( dirname "$SCRIPT_DIR" )
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 # saner programming env: these switches turn some bugs into errors
 set -o errexit -o pipefail -o noclobber -o nounset
@@ -74,7 +73,7 @@ OutputFileBaseName="${OutputFileName%%.*}"
 
 rm -f "$OutputFileBaseName.ir"
 #echo "DEBUG" "$OutputFileBaseName.ir" "$InputFileName" "${DIR}/build/mila"
-> "$OutputFileBaseName.ir" < "$InputFileName" "${PROJECT_DIR}/build/mila" &&
+> "$OutputFileBaseName.ir" < "$InputFileName" "${DIR}/build/mila" &&
 rm -f "$OutputFileBaseName.s"
-llc "$OutputFileBaseName.ir" -o "$OutputFileBaseName.s" &&
-clang "$OutputFileBaseName.s" "${PROJECT_DIR}/compiler/fce.c" -o "$OutputFileName"
+llc "$OutputFileBaseName.ir" -o "$OutputFileBaseName.s" -relocation-model=pic &&
+clang "$OutputFileBaseName.s" "${DIR}/compiler/fce.c" -o "$OutputFileName"
