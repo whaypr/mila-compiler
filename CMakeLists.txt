@@ -21,7 +21,7 @@ add_executable(
     compiler/main.cpp
     compiler/lexer/lexer.hpp compiler/lexer/lexer.cpp
     compiler/parser/parser.hpp compiler/parser/parser.cpp compiler/parser/descent.hpp compiler/parser/descent.cpp
-    compiler/ast/AST.hpp compiler/ast/AST.cpp compiler/ast/AST_gen.cpp compiler/ast/AST_print.cpp
+    compiler/ast/ast.hpp compiler/ast/ast.cpp compiler/ast/ast_gen.cpp compiler/ast/ast_print.cpp
 )
 
 target_include_directories(mila PRIVATE ${LLVM_INCLUDE_DIRS})

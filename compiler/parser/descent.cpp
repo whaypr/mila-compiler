@@ -1,16 +1,18 @@
 #include "descent.hpp"
+
+#include <algorithm>
 #include <iostream>
+#include <memory>
 #include <ostream>
+#include <string>
+#include <utility>
+#include <vector>
 
-#define DECOMP_INFO 0
 
-
-void Descent::match( Token tok ) {
-    if (lookahead == tok)
-        lookahead = lexer.nextToken();
-    else {
+Token Descent::match( Token tok ) {
+    if (lookahead != tok)
         throw ParserError("Parser error in MATCH");
-    }
+    return lookahead = lexer.nextToken();
 }
 
 

@@ -1,5 +1,4 @@
-#ifndef PJPPROJECT_LEXER_HPP
-#define PJPPROJECT_LEXER_HPP
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -115,5 +114,3 @@ private:
     int symbol; // input symbol
     InputCharType symbol_type; // input symbol type
 };
-
-#endif //PJPPROJECT_LEXER_HPP

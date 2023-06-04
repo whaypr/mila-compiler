@@ -1,12 +1,17 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "../lexer/lexer.hpp"
+
+#include <memory>
 
 
 class Descent {
 public:
-    Descent (Lexer &l, Token &t): lexer(l), lookahead(t) {}
+    Descent (Lexer &l, Token &t, bool DECOMP_INFO): lexer(l), lookahead(t), DECOMP_INFO(DECOMP_INFO) {}
+
+    Token match(Token tok);
 
     void PROGRAM();
     void BLOCK();
@@ -65,8 +70,7 @@ public:
 private:
     Lexer &lexer;
     Token &lookahead;
-
-    void match(Token tok);
+    bool DECOMP_INFO;
+    
     std::string ParserError( std::string msg="PARSE ERROR!" );
-
 };

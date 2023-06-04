@@ -1,21 +1,18 @@
+#include <iostream>
+
 #include "parser.hpp"
 #include "descent.hpp"
 
-Parser::Parser()
-    : descent(lexer, lookahead)
-{
-}
 
-bool Parser::Parse()
+std::unique_ptr<ProgramASTNode> Parser::parse()
 {
     lexer.nextSymbol();
     getNextToken();
-    descent.PROGRAM();
 
-    if ( lookahead != tok_eof )
-        return false;
+    auto res = descent.PROGRAM();
 
-    return true;
+    descent.match(tok_eof);
+    return res;
 }
 
 

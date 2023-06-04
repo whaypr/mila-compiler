@@ -1,14 +1,16 @@
+#include "lexer/lexer.hpp"
 #include "parser/parser.hpp"
 #include <iostream>
 #include <string>
 
 
 int main (int argc, char *argv[]) {
-    Parser parser;
+    Lexer lexer;
+    Parser parser(lexer, argc == 1 ? false : true);
 
     try {
-        parser.Parse();
-        std::cout << "Parsed successfully" << std::endl;
+            std::cout << "------------ LEFT DECOMPOSITION ------------" << std::endl;
+            std::unique_ptr<ProgramASTNode> ast = parser.parse();
     } catch (std::string msg) {
         std::cout << msg << std::endl;
     }
