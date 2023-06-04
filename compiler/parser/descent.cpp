@@ -253,10 +253,10 @@ void Descent::VARIABLE_DECLARATION( std::vector<std::unique_ptr<StatementASTNode
         if (DECOMP_INFO) std::cout << "rule 23: VARIABLE_DECLARATION ⟶ IDENTIFIER_LIST colon TYPE_IDENTIFIER" << std::endl;
         auto identifiers = IDENTIFIER_LIST();
         match(tok_colon);
-        auto typePtr = TYPE_IDENTIFIER().get();
+        auto type = TYPE_IDENTIFIER();
 
         for ( const auto & ident : identifiers ) {
-            statements.push_back( std::make_unique<VarDeclASTNode>(ident, std::unique_ptr<TypeASTNode>(typePtr)) );
+            statements.push_back( std::make_unique<VarDeclASTNode>(ident, std::move(type)) );
         }
         break;
     }
