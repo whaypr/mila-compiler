@@ -276,8 +276,13 @@ llvm::Value* ProcCallASTNode::codegen(GenContext& gen) const
     assert(proc);
 
     std::vector<llvm::Value*> args;
-    for (const auto& arg : m_args)
-        args.emplace_back(arg->codegen(gen));
+    if (m_proc != "readln") {
+        for (const auto& arg : m_args)
+            args.emplace_back(arg->codegen(gen));
+    } else {
+        auto store = static_cast<DeclRefASTNode*>(m_args[0].get())->getStore(gen);
+        args.emplace_back(store);
+    }
 
     return gen.builder.CreateCall(proc, args);
 }

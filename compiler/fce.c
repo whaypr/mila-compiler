@@ -7,7 +7,6 @@ int write(int x) {
 
 int writeln(int x) {
     printf("%d\n", x);
-
     return 0;
 }
 
