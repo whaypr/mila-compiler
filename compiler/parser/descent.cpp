@@ -22,57 +22,62 @@ std::string Descent::ParserError( std::string msg ) {
 
 
 // ----------------------------------------------------------------
-void Descent::PROGRAM()
+std::unique_ptr<ProgramASTNode> Descent::PROGRAM()
 {
     switch(lookahead) {
-    case tok_program:
+    case tok_program: {
         if (DECOMP_INFO) std::cout << "rule 1: PROGRAM ⟶ program ident semi BLOCK dot" << std::endl;
         match(tok_program);
-        match(tok_identifier);
+        match(tok_identifier); // program name - useless
         match(tok_semicolon);
-        BLOCK();
+        std::vector<std::unique_ptr<StatementASTNode>> statements = BLOCK();
         match(tok_dot);
-        break;
+
+        return std::make_unique<ProgramASTNode>(std::move(statements));
+    }
     default:
         throw ParserError("Parser error in PROGRAM");
     }
 }
 
-void Descent::BLOCK()
+std::vector<std::unique_ptr<StatementASTNode>> Descent::BLOCK()
 {
     switch(lookahead) {
     case tok_const:
     case tok_var:
     case tok_procedure:
     case tok_function:
-    case tok_begin:
+    case tok_begin: {
         if (DECOMP_INFO) std::cout << "rule 2: BLOCK ⟶ BLOCK_I COMPOUND_STATEMENT" << std::endl;
-        BLOCK_I();
-        COMPOUND_STATEMENT();
-        break;
+        std::vector<std::unique_ptr<StatementASTNode>> statements = std::vector<std::unique_ptr<StatementASTNode>>();
+        BLOCK_I(statements);
+        auto followingStatement = COMPOUND_STATEMENT();
+        statements.push_back(std::unique_ptr<StatementASTNode>(std::move(followingStatement)));
+        return statements;
+    }
     default:
         throw ParserError("Parser error in BLOCK");
     }
 }
 
-void Descent::BLOCK_I()
+void Descent::BLOCK_I( std::vector<std::unique_ptr<StatementASTNode>> &statements )
 {
     switch(lookahead) {
     case tok_const:
         if (DECOMP_INFO) std::cout << "rule 3: BLOCK_I ⟶ CONSTANT_DEFINITION BLOCK_I" << std::endl;
-        CONSTANT_DEFINITION();
-        BLOCK_I();
+        CONSTANT_DEFINITION(statements);
+        BLOCK_I(statements);
         break;
     case tok_var:
         if (DECOMP_INFO) std::cout << "rule 4: BLOCK_I ⟶ VARIABLE_DECLARATION_PART BLOCK_I" << std::endl;
-        VARIABLE_DECLARATION_PART();
-        BLOCK_I();
+        VARIABLE_DECLARATION_PART(statements);
+        BLOCK_I(statements);
         break;
     case tok_procedure:
     case tok_function:
         if (DECOMP_INFO) std::cout << "rule 5: BLOCK_I ⟶ PROCEDURE_AND_FUNCTION_DECLARATION_PART BLOCK_I" << std::endl;
-        PROCEDURE_AND_FUNCTION_DECLARATION_PART();
-        BLOCK_I();
+        PROCEDURE_AND_FUNCTION_DECLARATION_PART(statements);
+        BLOCK_I(statements);
         break;
     case tok_begin:
         if (DECOMP_INFO) std::cout << "rule 6: BLOCK_I ⟶ ε" << std::endl;
@@ -82,34 +87,42 @@ void Descent::BLOCK_I()
     }
 }
 
-void Descent::CONSTANT_DEFINITION()
+void Descent::CONSTANT_DEFINITION( std::vector<std::unique_ptr<StatementASTNode>> &statements )
 {
     switch(lookahead) {
-    case tok_const:
+    case tok_const: {
         if (DECOMP_INFO) std::cout << "rule 7: CONSTANT_DEFINITION ⟶ const ident equal CONSTANT semi CONSTANT_DEFINITION_I" << std::endl;
         match(tok_const);
+        std::string ident = lexer.identifierStr();
         match(tok_identifier);
         match(tok_equal);
-        CONSTANT();
+        std::unique_ptr<LiteralASTNode> val = CONSTANT(); // TODO víc než jen int
         match(tok_semicolon);
-        CONSTANT_DEFINITION_I();
+
+        statements.push_back(std::make_unique<ConstDefASTNode>(std::move(ident), std::move(val)));
+        CONSTANT_DEFINITION_I(statements);
         break;
+    }
     default:
         throw ParserError("Parser error in CONSTANT_DEFINITION");
     }
 }
 
-void Descent::CONSTANT_DEFINITION_I()
+void Descent::CONSTANT_DEFINITION_I( std::vector<std::unique_ptr<StatementASTNode>> &statements )
 {
     switch(lookahead) {
-    case tok_identifier:
+    case tok_identifier: {
         if (DECOMP_INFO) std::cout << "rule 8: CONSTANT_DEFINITION_I ⟶ ident equal CONSTANT semi CONSTANT_DEFINITION_I" << std::endl;
+        std::string ident = lexer.identifierStr();
         match(tok_identifier);
         match(tok_equal);
-        CONSTANT();
+        std::unique_ptr<LiteralASTNode> val = CONSTANT(); // TODO víc než jen int
         match(tok_semicolon);
-        CONSTANT_DEFINITION_I();
+
+        statements.push_back(std::make_unique<ConstDefASTNode>(std::move(ident), std::move(val)));
+        CONSTANT_DEFINITION_I(statements);
         break;
+    }
     case tok_const:
     case tok_var:
     case tok_procedure:
@@ -122,104 +135,104 @@ void Descent::CONSTANT_DEFINITION_I()
     }
 }
 
-void Descent::CONSTANT()
+std::unique_ptr<LiteralASTNode> Descent::CONSTANT()
 {
     switch(lookahead) {
     case tok_intLiteral:
     case tok_realLiteral:
         if (DECOMP_INFO) std::cout << "rule 10: CONSTANT ⟶ UNSIGNED_NUMBER" << std::endl;
-        UNSIGNED_NUMBER();
-        break;
+        return UNSIGNED_NUMBER(); // TODO víc než int
     case tok_plus:
         if (DECOMP_INFO) std::cout << "rule 11: CONSTANT ⟶ plus CONSTANT_L" << std::endl;
         match(tok_plus);
-        CONSTANT_L();
-        break;
+        return CONSTANT_L(); // TODO víc než int
     case tok_identifier:
         if (DECOMP_INFO) std::cout << "rule 12: CONSTANT ⟶ ident" << std::endl;
         match(tok_identifier);
-        break;
+        return std::make_unique<LiteralASTNode>(0); // TODO zde identifier (hodnota z tabulky symbolů asi)
     case tok_minus:
         if (DECOMP_INFO) std::cout << "rule 13: CONSTANT ⟶ minus CONSTANT_L" << std::endl;
         match(tok_minus);
-        CONSTANT_L();
-        break;
+        return std::make_unique<LiteralASTNode>(- CONSTANT_L()->getVal()); // TODO víc než int
     case tok_stringLiteral:
         if (DECOMP_INFO) std::cout << "rule 14: CONSTANT ⟶ string_literal" << std::endl;
         match(tok_stringLiteral);
-        break;
+        return std::make_unique<LiteralASTNode>(0); // TODO zde string ( lexer.stringVal() )
     default:
         throw ParserError("Parser error in CONSTANT");
     }
 }
 
-void Descent::CONSTANT_L()
+std::unique_ptr<LiteralASTNode> Descent::CONSTANT_L()
 {
     switch(lookahead) {
     case tok_intLiteral:
     case tok_realLiteral:
         if (DECOMP_INFO) std::cout << "rule 15: CONSTANT_L ⟶ UNSIGNED_NUMBER" << std::endl;
-        UNSIGNED_NUMBER();
-        break;
+        return UNSIGNED_NUMBER();
     case tok_identifier:
         if (DECOMP_INFO) std::cout << "rule 16: CONSTANT_L ⟶ ident" << std::endl;
         match(tok_identifier);
-        break;
+        return std::make_unique<LiteralASTNode>(0); // TODO zde hodnota z tabulky symbolů asi
     default:
         throw ParserError("Parser error in CONSTANT_L");
     }
 }
 
-void Descent::UNSIGNED_NUMBER()
+std::unique_ptr<LiteralASTNode> Descent::UNSIGNED_NUMBER()
 {
     switch(lookahead) {
-    case tok_intLiteral:
+    case tok_intLiteral: {
         if (DECOMP_INFO) std::cout << "rule 17: UNSIGNED_NUMBER -> num_int" << std::endl;
+        auto val = lexer.intVal();
         match(tok_intLiteral);
-        break;
-    case tok_realLiteral:
+        return std::make_unique<LiteralASTNode>(val);
+    }
+    case tok_realLiteral: {
         if (DECOMP_INFO) std::cout << "rule 18: UNSIGNED_NUMBER -> num_real" << std::endl;
+        auto val = lexer.realVal();
         match(tok_realLiteral);
-        break;
+        return std::make_unique<LiteralASTNode>(val); // TODO bude castnuto na int
+    }
     default:
         throw ParserError("Parser error in UNSIGNED_NUMBER");
     }
 }
 
-void Descent::VARIABLE_DECLARATION_PART()
+void Descent::VARIABLE_DECLARATION_PART( std::vector<std::unique_ptr<StatementASTNode>> &statements )
 {
     switch(lookahead) {
     case tok_var:
         if (DECOMP_INFO) std::cout << "rule 19: VARIABLE_DECLARATION_PART ⟶ var VARIABLE_DECLARATION VARIABLE_DECLARATION_PART_I_semi" << std::endl;
         match(tok_var);
-        VARIABLE_DECLARATION();
-        VARIABLE_DECLARATION_PART_I_semi();
+        VARIABLE_DECLARATION(statements);
+        VARIABLE_DECLARATION_PART_I_semi(statements);
         break;
     default:
         throw ParserError("Parser error in VARIABLE_DECLARATION_PART");
     }
 }
 
-void Descent::VARIABLE_DECLARATION_PART_I_semi()
+void Descent::VARIABLE_DECLARATION_PART_I_semi( std::vector<std::unique_ptr<StatementASTNode>> &statements )
 {
     switch(lookahead) {
     case tok_semicolon:
         if (DECOMP_INFO) std::cout << "rule 20: VARIABLE_DECLARATION_PART_I_semi ⟶ semi VARIABLE_DECLARATION_PART_I_semi_L" << std::endl;
         match(tok_semicolon);
-        VARIABLE_DECLARATION_PART_I_semi_L();
+        VARIABLE_DECLARATION_PART_I_semi_L(statements);
         break;
     default:
         throw ParserError("Parser error in VARIABLE_DECLARATION_PART_I_semi");
     }
 }
 
-void Descent::VARIABLE_DECLARATION_PART_I_semi_L()
+void Descent::VARIABLE_DECLARATION_PART_I_semi_L( std::vector<std::unique_ptr<StatementASTNode>> &statements )
 {
     switch(lookahead) {
     case tok_identifier:
         if (DECOMP_INFO) std::cout << "rule 21: VARIABLE_DECLARATION_PART_I_semi_L ⟶ VARIABLE_DECLARATION VARIABLE_DECLARATION_PART_I_semi" << std::endl;
-        VARIABLE_DECLARATION();
-        VARIABLE_DECLARATION_PART_I_semi();
+        VARIABLE_DECLARATION(statements);
+        VARIABLE_DECLARATION_PART_I_semi(statements);
         break;
     case tok_const:
     case tok_var:
@@ -233,41 +246,53 @@ void Descent::VARIABLE_DECLARATION_PART_I_semi_L()
     }
 }
 
-void Descent::VARIABLE_DECLARATION()
+void Descent::VARIABLE_DECLARATION( std::vector<std::unique_ptr<StatementASTNode>> &statements )
 {
     switch(lookahead) {
-    case tok_identifier:
+    case tok_identifier: {
         if (DECOMP_INFO) std::cout << "rule 23: VARIABLE_DECLARATION ⟶ IDENTIFIER_LIST colon TYPE_IDENTIFIER" << std::endl;
-        IDENTIFIER_LIST();
+        auto identifiers = IDENTIFIER_LIST();
         match(tok_colon);
-        TYPE_IDENTIFIER();
+        auto typePtr = TYPE_IDENTIFIER().get();
+
+        for ( const auto & ident : identifiers ) {
+            statements.push_back( std::make_unique<VarDeclASTNode>(ident, std::unique_ptr<TypeASTNode>(typePtr)) );
+        }
         break;
+    }
     default:
         throw ParserError("Parser error in VARIABLE_DECLARATION");
     }
 }
 
-void Descent::IDENTIFIER_LIST()
+std::vector<std::string> Descent::IDENTIFIER_LIST()
 {
     switch(lookahead) {
-    case tok_identifier:
+    case tok_identifier: {
         if (DECOMP_INFO) std::cout << "rule 24: IDENTIFIER_LIST ⟶ ident IDENTIFIER_LIST_I" << std::endl;
+        std::vector<std::string> identificators = std::vector<std::string>();
+        identificators.push_back( lexer.identifierStr() );
         match(tok_identifier);
-        IDENTIFIER_LIST_I();
-        break;
+
+        IDENTIFIER_LIST_I(identificators);
+        return identificators;
+    }
     default:
         throw ParserError("Parser error in IDENTIFIER_LIST");
     }
 }
 
-void Descent::IDENTIFIER_LIST_I()
+void Descent::IDENTIFIER_LIST_I( std::vector<std::string> &identificators )
 {
     switch(lookahead) {
-    case tok_comma:
-        if (DECOMP_INFO) std::cout << "rule 25: IDENTIFIER_LIST_I ⟶ comma ident" << std::endl;
+    case tok_comma: {
+        if (DECOMP_INFO) std::cout << "rule 25: IDENTIFIER_LIST_I ⟶ comma ident IDENTIFIER_LIST_I" << std::endl;
         match(tok_comma);
+        identificators.push_back( lexer.identifierStr() );
         match(tok_identifier);
+        IDENTIFIER_LIST_I(identificators);
         break;
+    }
     case tok_colon:
         if (DECOMP_INFO) std::cout << "rule 26: IDENTIFIER_LIST_I ⟶ ε" << std::endl;
         break;
@@ -276,31 +301,31 @@ void Descent::IDENTIFIER_LIST_I()
     }
 }
 
-void Descent::TYPE_IDENTIFIER()
+std::unique_ptr<TypeASTNode> Descent::TYPE_IDENTIFIER()
 {
     switch(lookahead) {
     case tok_identifier:
         if (DECOMP_INFO) std::cout << "rule 27: TYPE_IDENTIFIER ⟶ ident" << std::endl;
         match(tok_identifier);
-        break;
+        return std::make_unique<TypeASTNode>(TypeASTNode::Type::INT); // TODO
     case tok_integer:
         if (DECOMP_INFO) std::cout << "rule 28: TYPE_IDENTIFIER ⟶ integer" << std::endl;
         match(tok_integer);
-        break;
+        return std::make_unique<TypeASTNode>(TypeASTNode::Type::INT);
     case tok_real:
         if (DECOMP_INFO) std::cout << "rule 29: TYPE_IDENTIFIER ⟶ real" << std::endl;
         match(tok_real);
-        break;
+        return std::make_unique<TypeASTNode>(TypeASTNode::Type::DOUBLE);
     case tok_string:
         if (DECOMP_INFO) std::cout << "rule 30: TYPE_IDENTIFIER ⟶ string" << std::endl;
         match(tok_string);
-        break;
+        return std::make_unique<TypeASTNode>(TypeASTNode::Type::INT); // TODO
     default:
         throw ParserError("Parser error in TYPE_IDENTIFIER");
     }
 }
 
-void Descent::PROCEDURE_AND_FUNCTION_DECLARATION_PART()
+void Descent::PROCEDURE_AND_FUNCTION_DECLARATION_PART( std::vector<std::unique_ptr<StatementASTNode>> &statements )
 {
     switch(lookahead) {
     case tok_procedure:
@@ -308,7 +333,7 @@ void Descent::PROCEDURE_AND_FUNCTION_DECLARATION_PART()
         if (DECOMP_INFO) std::cout << "rule 31: PROCEDURE_AND_FUNCTION_DECLARATION_PART ⟶ PROCEDURE_OR_FUNCTION_DECLARATION semi" << std::endl;
         PROCEDURE_OR_FUNCTION_DECLARATION();
         match(tok_semicolon);
-        break;
+        return; // TODO
     default:
         throw ParserError("Parser error in PROCEDURE_AND_FUNCTION_DECLARATION_PART");
     }
@@ -320,11 +345,11 @@ void Descent::PROCEDURE_OR_FUNCTION_DECLARATION()
     case tok_procedure:
         if (DECOMP_INFO) std::cout << "rule 32: PROCEDURE_OR_FUNCTION_DECLARATION ⟶ PROCEDURE_DECLARATION" << std::endl;
         PROCEDURE_DECLARATION();
-        break;
+        return; // TODO
     case tok_function:
         if (DECOMP_INFO) std::cout << "rule 33: PROCEDURE_OR_FUNCTION_DECLARATION ⟶ FUNCTION_DECLARATION" << std::endl;
         FUNCTION_DECLARATION();
-        break;
+        return; // TODO
     default:
         throw ParserError("Parser error in PROCEDURE_OR_FUNCTION_DECLARATION");
     }
@@ -340,7 +365,7 @@ void Descent::PROCEDURE_DECLARATION()
         FORMAL_PARAMETER_LIST_OPT();
         match(tok_semicolon);
         FORWARD_OR_BLOCK();
-        break;
+        return; // TODO
     default:
         throw ParserError("Parser error in PROCEDURE_DECLARATION");
     }
@@ -352,11 +377,11 @@ void Descent::FORMAL_PARAMETER_LIST_OPT()
     case tok_lparen:
         if (DECOMP_INFO) std::cout << "rule 35: FORMAL_PARAMETER_LIST_OPT ⟶ FORMAL_PARAMETER_LIST" << std::endl;
         FORMAL_PARAMETER_LIST();
-        break;
+        return; // TODO
     case tok_semicolon:
     case tok_colon:
         if (DECOMP_INFO) std::cout << "rule 36: FORMAL_PARAMETER_LIST_OPT ⟶ ε" << std::endl;
-        break;
+        return; // TODO
     default:
         throw ParserError("Parser error in FORMAL_PARAMETER_LIST_OPT");
     }
@@ -371,7 +396,7 @@ void Descent::FORMAL_PARAMETER_LIST()
         PARAMETER_GROUP();
         FORMAL_PARAMETER_LIST_I();
         match(tok_rparen);
-        break;
+        return; // TODO
     default:
         throw ParserError("Parser error in FORMAL_PARAMETER_LIST");
     }
@@ -385,10 +410,10 @@ void Descent::FORMAL_PARAMETER_LIST_I()
         match(tok_semicolon);
         PARAMETER_GROUP();
         FORMAL_PARAMETER_LIST_I();
-        break;
+        return; // TODO
     case tok_rparen:
         if (DECOMP_INFO) std::cout << "rule 39: FORMAL_PARAMETER_LIST_I ⟶ ε" << std::endl;
-        break;
+        return; // TODO
     default:
         throw ParserError("Parser error in FORMAL_PARAMETER_LIST_I");
     }
@@ -402,7 +427,7 @@ void Descent::PARAMETER_GROUP()
         IDENTIFIER_LIST();
         match(tok_colon);
         TYPE_IDENTIFIER();
-        break;
+        return; // TODO
     default:
         throw ParserError("Parser error in PARAMETER_GROUP");
     }
@@ -414,7 +439,7 @@ void Descent::FORWARD_OR_BLOCK()
     case tok_forward:
         if (DECOMP_INFO) std::cout << "rule 41: FORWARD_OR_BLOCK ⟶ forward" << std::endl;
         match(tok_forward);
-        break;
+        return; // TODO
     case tok_begin:
     case tok_const:
     case tok_function:
@@ -422,7 +447,7 @@ void Descent::FORWARD_OR_BLOCK()
     case tok_var:
         if (DECOMP_INFO) std::cout << "rule 42: FORWARD_OR_BLOCK ⟶ BLOCK" << std::endl;
         BLOCK();
-        break;
+        return; // TODO
     default:
         throw ParserError("Parser error in FORWARD");
     }
@@ -440,13 +465,13 @@ void Descent::FUNCTION_DECLARATION()
         TYPE_IDENTIFIER();
         match(tok_semicolon);
         FORWARD_OR_BLOCK();
-        break;
+        return; // TODO
     default:
         throw ParserError("Parser error in FUNCTION_DECLARATION");
     }
 }
 
-void Descent::STATEMENT()
+std::unique_ptr<StatementASTNode> Descent::STATEMENT()
 {
     switch(lookahead) {
     case tok_else:
@@ -455,126 +480,123 @@ void Descent::STATEMENT()
     case tok_semicolon:
     case tok_exit:
         if (DECOMP_INFO) std::cout << "rule 42: STATEMENT ⟶ SIMPLE_STATEMENT" << std::endl;
-        SIMPLE_STATEMENT();
-        break;
+        return SIMPLE_STATEMENT();
     case tok_begin:
     case tok_for:
     case tok_if:
     case tok_while:
         if (DECOMP_INFO) std::cout << "rule 43: STATEMENT ⟶ STRUCTURED_STATEMENT" << std::endl;
-        STRUCTURED_STATEMENT();
-        break;
+        return STRUCTURED_STATEMENT();
     default:
         throw ParserError("Parser error in STATEMENT");
     }
 }
 
-void Descent::SIMPLE_STATEMENT()
+std::unique_ptr<StatementASTNode> Descent::SIMPLE_STATEMENT()
 {
     switch(lookahead) {
     case tok_else:
     case tok_end:
     case tok_semicolon:
         if (DECOMP_INFO) std::cout << "rule 44: SIMPLE_STATEMENT ⟶ EMPTY_STATEMENT" << std::endl;
-        EMPTY_STATEMENT();
-        break;
+        return EMPTY_STATEMENT();
     case tok_exit:
         if (DECOMP_INFO) std::cout << "rule 45: SIMPLE_STATEMENT ⟶ exit" << std::endl;
         match(tok_exit);
-        break;
-    case tok_identifier:
+        return std::make_unique<ProcCallASTNode>("exit", std::vector<std::unique_ptr<ExprASTNode>>());
+    case tok_identifier: {
         if (DECOMP_INFO) std::cout << "rule 46: SIMPLE_STATEMENT ⟶ ident SIMPLE_STATEMENT_L" << std::endl;
+        std::string ident = lexer.identifierStr();
         match(tok_identifier);
-        SIMPLE_STATEMENT_L();
-        break;
+        return SIMPLE_STATEMENT_L(ident);
+    }
     default:
         throw ParserError("Parser error in SIMPLE_STATEMENT");
     }
 }
 
-void Descent::SIMPLE_STATEMENT_L()
+std::unique_ptr<StatementASTNode> Descent::SIMPLE_STATEMENT_L( std::string ident )
 {
     switch(lookahead) {
     case tok_assign:
         if (DECOMP_INFO) std::cout << "rule 47: SIMPLE_STATEMENT_L ⟶ assign EXPRESSION" << std::endl;
         match(tok_assign);
-        EXPRESSION();
-        break;
+        return std::make_unique<AssignASTNode>( std::make_unique<DeclRefASTNode>(ident), EXPRESSION() );
     case tok_lparen:
     case tok_semicolon:
     case tok_else:
     case tok_end:
         if (DECOMP_INFO) std::cout << "rule 48: SIMPLE_STATEMENT_L ⟶ PROCEDURE_STATEMENT_I" << std::endl;
-        PROCEDURE_STATEMENT_I();
-        break;
+        return std::make_unique<ProcCallASTNode>(ident, PROCEDURE_STATEMENT_I());
     default:
         throw ParserError("Parser error in SIMPLE_STATEMENT_L");
     }
 }
 
-void Descent::PROCEDURE_STATEMENT_I()
+std::vector<std::unique_ptr<ExprASTNode>> Descent::PROCEDURE_STATEMENT_I()
 {
     switch(lookahead) {
-    case tok_lparen:
+    case tok_lparen: {
         if (DECOMP_INFO) std::cout << "rule 49: PROCEDURE_STATEMENT_I ⟶ lparen PARAMETER_LIST rparen" << std::endl;
         match(tok_lparen);
-        PARAMETER_LIST();
+        std::vector<std::unique_ptr<ExprASTNode>> params = PARAMETER_LIST();
         match(tok_rparen);
-        break;
+        return params;
+    }
     case tok_semicolon:
     case tok_end:
     case tok_else:
         if (DECOMP_INFO) std::cout << "rule 50: PROCEDURE_STATEMENT_I ⟶ ε" << std::endl;
-        break;
+        return std::vector<std::unique_ptr<ExprASTNode>>();
     default:
         throw ParserError("Parser error in PROCEDURE_STATEMENT_I");
     }
 }
 
-void Descent::STRUCTURED_STATEMENT()
+std::unique_ptr<StatementASTNode> Descent::STRUCTURED_STATEMENT()
 {
     switch(lookahead) {
     case tok_begin:
         if (DECOMP_INFO) std::cout << "rule 51: STRUCTURED_STATEMENT ⟶ COMPOUND_STATEMENT" << std::endl;
-        COMPOUND_STATEMENT();
-        break;
+        return COMPOUND_STATEMENT();;
     case tok_if:
         if (DECOMP_INFO) std::cout << "rule 52: STRUCTURED_STATEMENT ⟶ IF_STATEMENT" << std::endl;
-        IF_STATEMENT();
-        break;
+        return IF_STATEMENT();
     case tok_for:
     case tok_while:
         if (DECOMP_INFO) std::cout << "rule 53: STRUCTURED_STATEMENT ⟶ REPETETIVE_STATEMENT" << std::endl;
-        REPETETIVE_STATEMENT();
-        break;
+        return REPETETIVE_STATEMENT();
     default:
         throw ParserError("Parser error in STRUCTURED_STATEMENT");
     }
 }
 
-void Descent::COMPOUND_STATEMENT()
+std::unique_ptr<CompoundStmtASTNode> Descent::COMPOUND_STATEMENT()
 {
     switch(lookahead) {
-    case tok_begin:
+    case tok_begin: {
         if (DECOMP_INFO) std::cout << "rule 54: COMPOUND_STATEMENT ⟶ begin STATEMENT COMPOUND_STATEMENT_I end" << std::endl;
+        std::vector<std::unique_ptr<StatementASTNode>> statements;
+        
         match(tok_begin);
-        STATEMENT();
-        COMPOUND_STATEMENT_I();
+        statements.push_back( STATEMENT() );
+        COMPOUND_STATEMENT_I(statements);
         match(tok_end);
-        break;
+        return std::make_unique<CompoundStmtASTNode>(std::move(statements));
+    }
     default:
         throw ParserError("Parser error in COMPOUND_STATEMENT");
     }
 }
 
-void Descent::COMPOUND_STATEMENT_I()
+void Descent::COMPOUND_STATEMENT_I( std::vector<std::unique_ptr<StatementASTNode>> &statements )
 {
     switch(lookahead) {
     case tok_semicolon:
         if (DECOMP_INFO) std::cout << "rule 55: COMPOUND_STATEMENT_I ⟶ semi STATEMENT COMPOUND_STATEMENT_I" << std::endl;
         match(tok_semicolon);
-        STATEMENT();
-        COMPOUND_STATEMENT_I();
+        statements.push_back( STATEMENT() );
+        COMPOUND_STATEMENT_I(statements);
         break;
     case tok_end:
         if (DECOMP_INFO) std::cout << "rule 56: COMPOUND_STATEMENT_I ⟶ ε" << std::endl;
@@ -584,103 +606,107 @@ void Descent::COMPOUND_STATEMENT_I()
     }
 }
 
-void Descent::IF_STATEMENT()
+std::unique_ptr<StatementASTNode> Descent::IF_STATEMENT()
 {
     switch(lookahead) {
-    case tok_if:
+    case tok_if: {
         if (DECOMP_INFO) std::cout << "rule 57: IF_STATEMENT ⟶ if EXPRESSION then STATEMENT IF_STATEMENT_I" << std::endl;
         match(tok_if);
-        EXPRESSION();
+        std::unique_ptr<ExprASTNode> cond = EXPRESSION();
+
         match(tok_then);
-        STATEMENT();
-        IF_STATEMENT_I();
-        break;
+        std::unique_ptr<StatementASTNode> body = STATEMENT();
+
+        std::unique_ptr<StatementASTNode> elseBody = IF_STATEMENT_I();
+
+        return std::make_unique<IfASTNode>(
+            std::move(cond), std::move(body), std::move(elseBody));
+    }
     default:
         throw ParserError("Parser error in IF_STATEMENT");
     }
 }
 
-void Descent::IF_STATEMENT_I()
+std::unique_ptr<StatementASTNode> Descent::IF_STATEMENT_I()
 {
     switch(lookahead) {
     case tok_else:
         if (DECOMP_INFO) std::cout << "rule 58: IF_STATEMENT_I ⟶ else STATEMENT" << std::endl; // could be rule 58 as well
         match(tok_else);
-        STATEMENT();
-        break;
+        return STATEMENT();
     case tok_end:
     case tok_semicolon:
         if (DECOMP_INFO) std::cout << "rule 59: IF_STATEMENT_I ⟶ ε" << std::endl;
-        break;
+        return nullptr;
     default:
         throw ParserError("Parser error in IF_STATEMENT_I");
     }
 }
 
-void Descent::REPETETIVE_STATEMENT()
+std::unique_ptr<StatementASTNode> Descent::REPETETIVE_STATEMENT()
 {
     switch(lookahead) {
     case tok_while:
         if (DECOMP_INFO) std::cout << "rule 60: REPETETIVE_STATEMENT ⟶ WHILE_STATEMENT" << std::endl;
-        WHILE_STATEMENT();
-        break;
+        return WHILE_STATEMENT();
     case tok_for:
         if (DECOMP_INFO) std::cout << "rule 61: REPETETIVE_STATEMENT ⟶ FOR_STATEMENT" << std::endl;
-        FOR_STATEMENT();
-        break;
+        return FOR_STATEMENT();
     default:
         throw ParserError("Parser error in REPETETIVE_STATEMENT");
     }
 }
 
-void Descent::WHILE_STATEMENT()
+std::unique_ptr<WhileASTNode> Descent::WHILE_STATEMENT()
 {
     switch(lookahead) {
-    case tok_while:
+    case tok_while: {
         if (DECOMP_INFO) std::cout << "rule 62: WHILE_STATEMENT ⟶ while EXPRESSION do STATEMENT" << std::endl;
         match(tok_while);
-        EXPRESSION();
+        auto cond = EXPRESSION();
         match(tok_do);
-        STATEMENT();
-        break;
+        auto body = STATEMENT();
+        return std::make_unique<WhileASTNode>(std::move(cond), std::move(body));
+    }
     default:
         throw ParserError("Parser error in WHILE_STATEMENT");
     }
 }
 
-void Descent::FOR_STATEMENT()
+std::unique_ptr<ForASTNode> Descent::FOR_STATEMENT()
 {
     switch(lookahead) {
-    case tok_for:
+    case tok_for: {
         if (DECOMP_INFO) std::cout << "rule 63: FOR_STATEMENT ⟶ for ident assign EXPRESSION to EXPRESSION do STATEMENT" << std::endl;
         match(tok_for);
+        std::string ident = lexer.identifierStr();
         match(tok_identifier);
         match(tok_assign);
-        EXPRESSION();
+        auto init = std::make_unique<AssignASTNode>( std::make_unique<DeclRefASTNode>(ident), EXPRESSION() );
         match(tok_to);
-        EXPRESSION();
+        auto to = EXPRESSION();
         match(tok_do);
-        STATEMENT();
-        break;
+        return std::make_unique<ForASTNode>(std::move(init), std::move(to), STATEMENT() );
+    }
     default:
         throw ParserError("Parser error in FOR_STATEMENT");
     }
 }
 
-void Descent::EMPTY_STATEMENT()
+std::unique_ptr<StatementASTNode> Descent::EMPTY_STATEMENT()
 {
     switch(lookahead) {
     case tok_else:
     case tok_end:
     case tok_semicolon:
         if (DECOMP_INFO) std::cout << "rule 64: EMPTY_STATEMENT ⟶ ε" << std::endl;
-        break;
+        return std::make_unique<EmptyStmtASTNode>();
     default:
         throw ParserError("Parser error in EMPTY_STATEMENT");
     }
 }
 
-void Descent::EXPRESSION()
+std::unique_ptr<ExprASTNode> Descent::EXPRESSION()
 {
     switch(lookahead) {
     case tok_plus:
@@ -692,15 +718,13 @@ void Descent::EXPRESSION()
     case tok_intLiteral:
     case tok_realLiteral:
         if (DECOMP_INFO) std::cout << "rule 65: EXPRESSION ⟶ SIMPLE_EXPRESSION EXPRESSION_I" << std::endl;
-        SIMPLE_EXPRESSION();
-        EXPRESSION_I();
-        break;
+        return EXPRESSION_I( SIMPLE_EXPRESSION() );
     default:
         throw ParserError("Parser error in EXPRESSION");
     }
 }
 
-void Descent::EXPRESSION_I()
+std::unique_ptr<ExprASTNode> Descent::EXPRESSION_I( std::unique_ptr<ExprASTNode> lhs )
 {
     switch(lookahead) {
     case tok_equal:
@@ -710,9 +734,7 @@ void Descent::EXPRESSION_I()
     case tok_ge:
     case tok_gt:
         if (DECOMP_INFO) std::cout << "rule 66: EXPRESSION_I ⟶ RELATIONAL_OPERATOR EXPRESSION" << std::endl;
-        RELATIONAL_OPERATOR();
-        EXPRESSION();
-        break;
+        return std::make_unique<BinOpASTNode>(RELATIONAL_OPERATOR(), std::move(lhs), EXPRESSION());
     case tok_then:
     case tok_do:
     case tok_to:
@@ -722,45 +744,45 @@ void Descent::EXPRESSION_I()
     case tok_end:
     case tok_semicolon:
         if (DECOMP_INFO) std::cout << "rule 67: EXPRESSION_I ⟶ ε" << std::endl;
-        break;
+        return lhs;
     default:
         throw ParserError("Parser error in EXPRESSION_I");
     }
 }
 
-void Descent::RELATIONAL_OPERATOR()
+Token Descent::RELATIONAL_OPERATOR()
 {
     switch(lookahead) {
     case tok_equal:
         if (DECOMP_INFO) std::cout << "rule 68: RELATIONAL_OPERATOR ⟶ equal" << std::endl;
         match(tok_equal);
-        break;
+        return tok_equal;
     case tok_notequal:
         if (DECOMP_INFO) std::cout << "rule 69: RELATIONAL_OPERATOR ⟶ not_equal" << std::endl;
         match(tok_notequal);
-        break;
+        return tok_notequal;
     case tok_lt:
         if (DECOMP_INFO) std::cout << "rule 70: RELATIONAL_OPERATOR ⟶ lt" << std::endl;
         match(tok_lt);
-        break;
+        return tok_lt;
     case tok_le:
         if (DECOMP_INFO) std::cout << "rule 71: RELATIONAL_OPERATOR ⟶ le" << std::endl;
         match(tok_le);
-        break;
+        return tok_le;
     case tok_ge:
         if (DECOMP_INFO) std::cout << "rule 72: RELATIONAL_OPERATOR ⟶ ge" << std::endl;
         match(tok_ge);
-        break;
+        return tok_ge;
     case tok_gt:
         if (DECOMP_INFO) std::cout << "rule 73: RELATIONAL_OPERATOR ⟶ gt" << std::endl;
         match(tok_gt);
-        break;
+        return tok_gt;
     default:
         throw ParserError("Parser error in RELATIONAL_OPERATOR");
     }
 }
 
-void Descent::SIMPLE_EXPRESSION()
+std::unique_ptr<ExprASTNode> Descent::SIMPLE_EXPRESSION()
 {
     switch(lookahead) {
     case tok_plus:
@@ -772,24 +794,20 @@ void Descent::SIMPLE_EXPRESSION()
     case tok_realLiteral:
     case tok_stringLiteral:
         if (DECOMP_INFO) std::cout << "rule 74: SIMPLE_EXPRESSION ⟶ TERM SIMPLE_EXPRESSION_I" << std::endl;
-        TERM();
-        SIMPLE_EXPRESSION_I();
-        break;
+        return SIMPLE_EXPRESSION_I( TERM() );
     default:
         throw ParserError("Parser error in SIMPLE_EXPRESSION");
     }
 }
 
-void Descent::SIMPLE_EXPRESSION_I()
+std::unique_ptr<ExprASTNode> Descent::SIMPLE_EXPRESSION_I( std::unique_ptr<ExprASTNode> lhs )
 {
     switch(lookahead) {
     case tok_plus:
     case tok_minus:
     case tok_or:
         if (DECOMP_INFO) std::cout << "rule 75: SIMPLE_EXPRESSION_I ⟶ ADDITIVE_OPERATOR SIMPLE_EXPRESSION" << std::endl;
-        ADDITIVE_OPERATOR();
-        SIMPLE_EXPRESSION();
-        break;
+        return std::make_unique<BinOpASTNode>(ADDITIVE_OPERATOR(), std::move(lhs), SIMPLE_EXPRESSION());
     case tok_equal:
     case tok_notequal:
     case tok_lt:
@@ -805,33 +823,33 @@ void Descent::SIMPLE_EXPRESSION_I()
     case tok_end:
     case tok_semicolon:
         if (DECOMP_INFO) std::cout << "rule 76: SIMPLE_EXPRESSION_I ⟶ ε" << std::endl;
-        break;
+        return lhs;
     default:
         throw ParserError("Parser error in SIMPLE_EXPRESSION_I");
     }
 }
 
-void Descent::ADDITIVE_OPERATOR()
+Token Descent::ADDITIVE_OPERATOR()
 {
     switch(lookahead) {
     case tok_plus:
         if (DECOMP_INFO) std::cout << "rule 77: ADDITIVE_OPERATOR ⟶ plus" << std::endl;
         match(tok_plus);
-        break;
+        return tok_plus;
     case tok_minus:
         if (DECOMP_INFO) std::cout << "rule 78: ADDITIVE_OPERATOR ⟶ minus" << std::endl;
         match(tok_minus);
-        break;
+        return tok_minus;
     case tok_or:
         if (DECOMP_INFO) std::cout << "rule 79: ADDITIVE_OPERATOR ⟶ or" << std::endl;
         match(tok_or);
-        break;
+        return tok_or;
     default:
         throw ParserError("Parser error in ADDITIVE_OPERATOR");
     }
 }
 
-void Descent::TERM()
+std::unique_ptr<ExprASTNode> Descent::TERM()
 {
     switch(lookahead) {
     case tok_plus:
@@ -843,15 +861,13 @@ void Descent::TERM()
     case tok_realLiteral:
     case tok_stringLiteral:
         if (DECOMP_INFO) std::cout << "rule 80: TERM ⟶ SIGNED_FACTOR TERM_I" << std::endl;
-        SIGNED_FACTOR();
-        TERM_I();
-        break;
+        return TERM_I( SIGNED_FACTOR() );
     default:
         throw ParserError("Parser error in TERM");
     }
 }
 
-void Descent::TERM_I()
+std::unique_ptr<ExprASTNode> Descent::TERM_I( std::unique_ptr<ExprASTNode> lhs )
 {
     switch(lookahead) {
     case tok_star:
@@ -859,9 +875,7 @@ void Descent::TERM_I()
     case tok_mod:
     case tok_and:
         if (DECOMP_INFO) std::cout << "rule 81: TERM_I ⟶ MULTIPLICATIVE_OPERATOR TERM" << std::endl;
-        MULTIPLICATIVE_OPERATOR();
-        TERM();
-        break;
+        return std::make_unique<BinOpASTNode>(MULTIPLICATIVE_OPERATOR(), std::move(lhs), TERM());
     case tok_plus:
     case tok_minus:
     case tok_or:
@@ -880,37 +894,37 @@ void Descent::TERM_I()
     case tok_semicolon:
     case tok_comma:
         if (DECOMP_INFO) std::cout << "rule 82: TERM_I ⟶ ε " << std::endl;
-        break;
+        return lhs;
     default:
         throw ParserError("Parser error in TERM_I");
     }
 }
 
-void Descent::MULTIPLICATIVE_OPERATOR()
+Token Descent::MULTIPLICATIVE_OPERATOR()
 {
     switch(lookahead) {
     case tok_star:
         if (DECOMP_INFO) std::cout << "rule 83: MULTIPLICATIVE_OPERATOR ⟶ star" << std::endl;
         match(tok_star);
-        break;
+        return tok_star;
     case tok_div:
         if (DECOMP_INFO) std::cout << "rule 84: MULTIPLICATIVE_OPERATOR ⟶ div" << std::endl;
         match(tok_div);
-        break;
+        return tok_div;
     case tok_mod:
         if (DECOMP_INFO) std::cout << "rule 85: MULTIPLICATIVE_OPERATOR ⟶ mod" << std::endl;
         match(tok_mod);
-        break;
+        return tok_mod;
     case tok_and:
         if (DECOMP_INFO) std::cout << "rule 86: MULTIPLICATIVE_OPERATOR ⟶ and" << std::endl;
         match(tok_and);
-        break;
+        return tok_and;
     default:
         throw ParserError("Parser error in MULTIPLICATIVE_OPERATOR");
     }
 }
 
-void Descent::SIGNED_FACTOR()
+std::unique_ptr<ExprASTNode> Descent::SIGNED_FACTOR()
 {
     switch(lookahead) {
     case tok_plus:
@@ -920,27 +934,30 @@ void Descent::SIGNED_FACTOR()
     case tok_not:
     case tok_intLiteral:
     case tok_realLiteral:
-    case tok_stringLiteral:
+    case tok_stringLiteral: {
         if (DECOMP_INFO) std::cout << "rule 87: SIGNED_FACTOR ⟶ SIGNED_FACTOR_I FACTOR" << std::endl;
-        SIGNED_FACTOR_I();
-        FACTOR();
-        break;
+
+        Token tok = SIGNED_FACTOR_I();
+        if (tok != tok_plus && tok != tok_minus)
+            return FACTOR();
+        return std::make_unique<UnaryOpASTNode>(tok, FACTOR());
+    }
     default:
         throw ParserError("Parser error in SIGNED_FACTOR");
     }
 }
 
-void Descent::SIGNED_FACTOR_I()
+Token Descent::SIGNED_FACTOR_I()
 {
     switch(lookahead) {
     case tok_plus:
         if (DECOMP_INFO) std::cout << "rule 88: SIGNED_FACTOR_I ⟶ plus" << std::endl;
         match(tok_plus);
-        break;
+        return tok_plus;
     case tok_minus:
         if (DECOMP_INFO) std::cout << "rule 89: SIGNED_FACTOR_I ⟶ minus" << std::endl;
         match(tok_minus);
-        break;
+        return tok_minus;
     case tok_identifier:
     case tok_lparen:
     case tok_not:
@@ -948,51 +965,53 @@ void Descent::SIGNED_FACTOR_I()
     case tok_realLiteral:
     case tok_stringLiteral:
         if (DECOMP_INFO) std::cout << "rule 90: SIGNED_FACTOR_I ⟶ ε" << std::endl;
-        break;
+        return tok_eof; // dummy token
     default:
         throw ParserError("Parser error in SIGNED_FACTOR_I");
     }
 }
 
-void Descent::FACTOR()
+std::unique_ptr<ExprASTNode> Descent::FACTOR()
 {
     switch(lookahead) {
-    case tok_identifier:
+    case tok_identifier: {
         if (DECOMP_INFO) std::cout << "rule 91: FACTOR ⟶ ident FACTOR_I" << std::endl;
+
+        std::string ident = lexer.identifierStr();
         match(tok_identifier);
-        FACTOR_I();
-        break;
-    case tok_lparen:
+        return FACTOR_I(ident);
+    }
+    case tok_lparen: {
         if (DECOMP_INFO) std::cout << "rule 92: FACTOR ⟶ lparen EXPRESSION rparen" << std::endl;
         match(tok_lparen);
-        EXPRESSION();
+        auto expr = EXPRESSION();
         match(tok_rparen);
-        break;
+        return expr;
+    }
     case tok_intLiteral:
     case tok_realLiteral:
     case tok_stringLiteral:
         if (DECOMP_INFO) std::cout << "rule 93: FACTOR ⟶ UNSIGNED_CONSTANT" << std::endl;
-        UNSIGNED_CONSTANT();
-        break;
+        return UNSIGNED_CONSTANT();
     case tok_not:
         if (DECOMP_INFO) std::cout << "rule 94: FACTOR ⟶ not FACTOR" << std::endl;
         match(tok_not);
-        FACTOR();
-        break;
+        return std::make_unique<UnaryOpASTNode>(tok_not, FACTOR());
     default:
         throw ParserError("Parser error in FACTOR");
     }
 }
 
-void Descent::FACTOR_I()
+std::unique_ptr<ExprASTNode> Descent::FACTOR_I( std::string ident )
 {
     switch(lookahead) {
-    case tok_lparen:
+    case tok_lparen: {
         if (DECOMP_INFO) std::cout << "rule 95: FACTOR_I ⟶ lparen PARAMETER_LIST rparen" << std::endl;
         match(tok_lparen);
-        PARAMETER_LIST();
+        auto params = PARAMETER_LIST();
         match(tok_rparen);
-        break;
+        return std::make_unique<FunCallASTNode>(ident, std::move(params));
+    }
     case tok_and:
     case tok_comma:
     case tok_div:
@@ -1015,30 +1034,29 @@ void Descent::FACTOR_I()
     case tok_then:
     case tok_to:
         if (DECOMP_INFO) std::cout << "rule 96: FACTOR_I ⟶ ε" << std::endl;
-        break;
+        return std::make_unique<DeclRefASTNode>(ident);
     default:
         throw ParserError("Parser error in FACTOR_I");
     }
 }
 
-void Descent::UNSIGNED_CONSTANT()
+std::unique_ptr<LiteralASTNode> Descent::UNSIGNED_CONSTANT()
 {
     switch(lookahead) {
     case tok_intLiteral:
     case tok_realLiteral:
         if (DECOMP_INFO) std::cout << "rule 97: UNSIGNED_CONSTANT ⟶ UNSIGNED_NUMBER" << std::endl;
-        UNSIGNED_NUMBER();
-        break;
+        return UNSIGNED_NUMBER();
     case tok_stringLiteral:
         if (DECOMP_INFO) std::cout << "rule 98: UNSIGNED_CONSTANT ⟶ string_literal" << std::endl;
         match(tok_stringLiteral);
-        break;
+        return std::make_unique<LiteralASTNode>(0); // TODO vracet string
     default:
         throw ParserError("Parser error in UNSIGNED_CONSTANT");
     }
 }
 
-void Descent::PARAMETER_LIST()
+std::vector<std::unique_ptr<ExprASTNode>> Descent::PARAMETER_LIST()
 {
     switch(lookahead) {
     case tok_plus:
@@ -1048,24 +1066,26 @@ void Descent::PARAMETER_LIST()
     case tok_not:
     case tok_intLiteral:
     case tok_realLiteral:
-    case tok_stringLiteral:
+    case tok_stringLiteral: {
         if (DECOMP_INFO) std::cout << "rule 99: PARAMETER_LIST ⟶ EXPRESSION PARAMETER_LIST_I" << std::endl;
-        EXPRESSION();
-        PARAMETER_LIST_I();
-        break;
+        std::vector<std::unique_ptr<ExprASTNode>> params = std::vector<std::unique_ptr<ExprASTNode>>();
+        params.push_back( EXPRESSION() );
+        PARAMETER_LIST_I(params);
+        return params;
+    }
     default:
         throw ParserError("Parser error in PARAMETER_LIST");
     }
 }
 
-void Descent::PARAMETER_LIST_I()
+void Descent::PARAMETER_LIST_I( std::vector<std::unique_ptr<ExprASTNode>> &params )
 {
     switch(lookahead) {
     case tok_comma:
         if (DECOMP_INFO) std::cout << "rule 100: PARAMETER_LIST_I ⟶ comma EXPRESSION PARAMETER_LIST_I" << std::endl;
         match(tok_comma);
-        EXPRESSION();
-        PARAMETER_LIST_I();
+        params.push_back( EXPRESSION() );
+        PARAMETER_LIST_I(params);
         break;
     case tok_rparen:
         if (DECOMP_INFO) std::cout << "rule 101: PARAMETER_LIST_I ⟶ ε" << std::endl;

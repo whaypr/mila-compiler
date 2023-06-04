@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "../lexer/lexer.hpp"
+#include "../ast/ast.hpp"
 #include "descent.hpp"
 
 
