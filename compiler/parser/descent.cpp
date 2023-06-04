@@ -732,9 +732,12 @@ std::unique_ptr<ExprASTNode> Descent::EXPRESSION_I( std::unique_ptr<ExprASTNode>
     case tok_lt:
     case tok_le:
     case tok_ge:
-    case tok_gt:
+    case tok_gt: {
         if (DECOMP_INFO) std::cout << "rule 66: EXPRESSION_I ⟶ RELATIONAL_OPERATOR EXPRESSION" << std::endl;
-        return std::make_unique<BinOpASTNode>(RELATIONAL_OPERATOR(), std::move(lhs), EXPRESSION());
+        Token tok = RELATIONAL_OPERATOR();
+        auto rhs = EXPRESSION();
+        return std::make_unique<BinOpASTNode>(tok, std::move(lhs), std::move(rhs));
+    }
     case tok_then:
     case tok_do:
     case tok_to:
@@ -805,9 +808,12 @@ std::unique_ptr<ExprASTNode> Descent::SIMPLE_EXPRESSION_I( std::unique_ptr<ExprA
     switch(lookahead) {
     case tok_plus:
     case tok_minus:
-    case tok_or:
+    case tok_or: {
         if (DECOMP_INFO) std::cout << "rule 75: SIMPLE_EXPRESSION_I ⟶ ADDITIVE_OPERATOR SIMPLE_EXPRESSION" << std::endl;
-        return std::make_unique<BinOpASTNode>(ADDITIVE_OPERATOR(), std::move(lhs), SIMPLE_EXPRESSION());
+        Token tok = ADDITIVE_OPERATOR();
+        auto rhs = SIMPLE_EXPRESSION();
+        return std::make_unique<BinOpASTNode>(tok, std::move(lhs), std::move(rhs));
+    }
     case tok_equal:
     case tok_notequal:
     case tok_lt:
@@ -873,9 +879,12 @@ std::unique_ptr<ExprASTNode> Descent::TERM_I( std::unique_ptr<ExprASTNode> lhs )
     case tok_star:
     case tok_div:
     case tok_mod:
-    case tok_and:
+    case tok_and: {
         if (DECOMP_INFO) std::cout << "rule 81: TERM_I ⟶ MULTIPLICATIVE_OPERATOR TERM" << std::endl;
-        return std::make_unique<BinOpASTNode>(MULTIPLICATIVE_OPERATOR(), std::move(lhs), TERM());
+        Token tok = MULTIPLICATIVE_OPERATOR();
+        auto rhs = TERM();
+        return std::make_unique<BinOpASTNode>(tok, std::move(lhs), std::move(rhs));
+    }
     case tok_plus:
     case tok_minus:
     case tok_or:
