@@ -32,6 +32,7 @@ public:
 /**/    void PROCEDURE_AND_FUNCTION_DECLARATION_PART( std::vector<std::unique_ptr<StatementASTNode>> &statements );
 /**/    void PROCEDURE_OR_FUNCTION_DECLARATION();
 /**/    void PROCEDURE_DECLARATION();
+    TypeASTNode::Type TYPE_IDENTIFIER();
 /**/    void FORMAL_PARAMETER_LIST_OPT();
 /**/    void FORMAL_PARAMETER_LIST();
 /**/    void FORMAL_PARAMETER_LIST_I();

@@ -256,7 +256,8 @@ void Descent::VARIABLE_DECLARATION( std::vector<std::unique_ptr<StatementASTNode
         auto type = TYPE_IDENTIFIER();
 
         for ( const auto & ident : identifiers ) {
-            statements.push_back( std::make_unique<VarDeclASTNode>(ident, std::move(type)) );
+            auto typeNode = std::make_unique<TypeASTNode>(type);
+            statements.push_back( std::make_unique<VarDeclASTNode>(ident, std::move(typeNode)) );
         }
         break;
     }
@@ -301,25 +302,25 @@ void Descent::IDENTIFIER_LIST_I( std::vector<std::string> &identificators )
     }
 }
 
-std::unique_ptr<TypeASTNode> Descent::TYPE_IDENTIFIER()
+TypeASTNode::Type Descent::TYPE_IDENTIFIER()
 {
     switch(lookahead) {
     case tok_identifier:
         if (DECOMP_INFO) std::cout << "rule 27: TYPE_IDENTIFIER ⟶ ident" << std::endl;
         match(tok_identifier);
-        return std::make_unique<TypeASTNode>(TypeASTNode::Type::INT); // TODO
+        return TypeASTNode::Type::INT; // TODO
     case tok_integer:
         if (DECOMP_INFO) std::cout << "rule 28: TYPE_IDENTIFIER ⟶ integer" << std::endl;
         match(tok_integer);
-        return std::make_unique<TypeASTNode>(TypeASTNode::Type::INT);
+        return TypeASTNode::Type::INT;
     case tok_real:
         if (DECOMP_INFO) std::cout << "rule 29: TYPE_IDENTIFIER ⟶ real" << std::endl;
         match(tok_real);
-        return std::make_unique<TypeASTNode>(TypeASTNode::Type::DOUBLE);
+        return TypeASTNode::Type::DOUBLE;
     case tok_string:
         if (DECOMP_INFO) std::cout << "rule 30: TYPE_IDENTIFIER ⟶ string" << std::endl;
         match(tok_string);
-        return std::make_unique<TypeASTNode>(TypeASTNode::Type::INT); // TODO
+        return TypeASTNode::Type::INT; // TODO
     default:
         throw ParserError("Parser error in TYPE_IDENTIFIER");
     }
