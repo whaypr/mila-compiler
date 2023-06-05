@@ -276,7 +276,7 @@ llvm::Value* ProcCallASTNode::codegen(GenContext& gen) const
     assert(proc);
 
     std::vector<llvm::Value*> args;
-    if (m_proc != "readln") {
+    if (m_proc != "readln" && m_proc != "dec") {
         for (const auto& arg : m_args)
             args.emplace_back(arg->codegen(gen));
     } else {
@@ -320,6 +320,14 @@ llvm::Value* ProgramASTNode::codegen(GenContext& gen) const
             {llvm::Type::getInt32PtrTy(gen.ctx)},
             false);
         llvm::Function::Create(ft, llvm::Function::ExternalLinkage, "readln", gen.module);
+    }
+    // create dec function
+    {
+        llvm::FunctionType* ft = llvm::FunctionType::get(
+            llvm::Type::getVoidTy(gen.ctx),
+            {llvm::Type::getInt32PtrTy(gen.ctx)},
+            false);
+        llvm::Function::Create(ft, llvm::Function::ExternalLinkage, "dec", gen.module);
     }
 
     llvm::BasicBlock* BB = llvm::BasicBlock::Create(gen.ctx, "entry", fMain);
