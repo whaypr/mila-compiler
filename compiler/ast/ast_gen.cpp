@@ -160,6 +160,16 @@ llvm::Value* AssignASTNode::codegen(GenContext& gen) const
     return nullptr;
 }
 
+llvm::AllocaInst* AssignASTNode::getLHSStore(GenContext& gen) const
+{
+    return m_var->getStore(gen);
+}
+
+llvm::Value* AssignASTNode::loadLHS(GenContext& gen) const
+{
+    return m_var->codegen(gen);
+}
+
 llvm::Value* LiteralASTNode::codegen(GenContext& gen) const
 {
     return llvm::ConstantInt::get(llvm::Type::getInt32Ty(gen.ctx), m_value);
@@ -302,7 +312,7 @@ llvm::Value* WhileASTNode::codegen(GenContext& gen) const
 llvm::Value* ForASTNode::codegen(GenContext& gen) const
 {
     auto parent = gen.builder.GetInsertBlock()->getParent();
-    // assert(parent);
+    assert(parent);
 
     llvm::BasicBlock* BBcond = llvm::BasicBlock::Create(gen.ctx, "cond", parent);
     llvm::BasicBlock* BBbody = llvm::BasicBlock::Create(gen.ctx, "body", parent);
@@ -310,13 +320,16 @@ llvm::Value* ForASTNode::codegen(GenContext& gen) const
 
     m_init->codegen(gen);
     gen.builder.CreateBr(BBcond);
-    
+
     gen.builder.SetInsertPoint(BBcond);
-    auto cond = m_to->codegen(gen); // TODO po každý iteraci zvednout index o 1 a checknout
+    auto to = m_to->codegen(gen);
+    auto cond = gen.builder.CreateICmpSLE(m_init->loadLHS(gen), to, "le");
     gen.builder.CreateCondBr(cond, BBbody, BBafter);
 
     gen.builder.SetInsertPoint(BBbody);
     m_body->codegen(gen);
+    auto add = gen.builder.CreateAdd(m_init->loadLHS(gen), gen.builder.getInt32(1));
+    gen.builder.CreateStore(add, m_init->getLHSStore(gen));
     gen.builder.CreateBr(BBcond);
 
     gen.builder.SetInsertPoint(BBafter);

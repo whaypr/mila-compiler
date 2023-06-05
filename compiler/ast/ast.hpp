@@ -167,7 +167,9 @@ class AssignASTNode : public StatementASTNode {
 public:
     AssignASTNode(std::unique_ptr<DeclRefASTNode> var, std::unique_ptr<ExprASTNode> expr);
     void print(std::ostream& os, unsigned indent = 0) const override;
-    llvm::Value* codegen(GenContext& gen) const override;
+    llvm::Value *codegen(GenContext &gen) const override;
+    llvm::AllocaInst* getLHSStore(GenContext& gen) const;
+    llvm::Value* loadLHS(GenContext& gen) const;
 };
 
 // if
