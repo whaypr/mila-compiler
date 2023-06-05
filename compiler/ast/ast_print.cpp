@@ -127,7 +127,7 @@ void WhileASTNode::print(std::ostream& os, unsigned indent) const
 void ForASTNode::print(std::ostream& os, unsigned indent) const
 {
     MKINDENT;
-    os << "For" << std::endl;
+    os << "For (" << (isTo ? "to" : "downto") << ")" << std::endl;
     m_init->print(os, indent + 1);
     m_to->print(os, indent + 1);
     m_body->print(os, indent + 1);

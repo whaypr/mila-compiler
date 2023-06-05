@@ -200,9 +200,10 @@ class ForASTNode : public StatementASTNode {
     std::unique_ptr<AssignASTNode> m_init;
     std::unique_ptr<ExprASTNode> m_to;
     std::unique_ptr<StatementASTNode> m_body;
+    bool isTo;
 
 public:
-    ForASTNode(std::unique_ptr<AssignASTNode> init, std::unique_ptr<ExprASTNode> to, std::unique_ptr<StatementASTNode> body);
+    ForASTNode(std::unique_ptr<AssignASTNode> init, std::unique_ptr<ExprASTNode> to, std::unique_ptr<StatementASTNode> body, bool isTo);
     void print(std::ostream& os, unsigned indent = 0) const override;
     llvm::Value* codegen(GenContext& gen) const override;
 };

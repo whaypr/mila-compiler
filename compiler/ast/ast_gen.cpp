@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Value.h>
 #include <ostream>
 
 #include "ast.hpp"
@@ -323,12 +324,17 @@ llvm::Value* ForASTNode::codegen(GenContext& gen) const
 
     gen.builder.SetInsertPoint(BBcond);
     auto to = m_to->codegen(gen);
-    auto cond = gen.builder.CreateICmpSLE(m_init->loadLHS(gen), to, "le");
+    llvm::Value* cond;
+    if (isTo)
+        cond = gen.builder.CreateICmpSLE(m_init->loadLHS(gen), to, "le");
+    else
+        cond = gen.builder.CreateICmpSGE(m_init->loadLHS(gen), to, "ge");
     gen.builder.CreateCondBr(cond, BBbody, BBafter);
 
     gen.builder.SetInsertPoint(BBbody);
     m_body->codegen(gen);
-    auto add = gen.builder.CreateAdd(m_init->loadLHS(gen), gen.builder.getInt32(1));
+    int addVal = isTo ? 1 : -1;
+    auto add = gen.builder.CreateAdd(m_init->loadLHS(gen), gen.builder.getInt32(addVal));
     gen.builder.CreateStore(add, m_init->getLHSStore(gen));
     gen.builder.CreateBr(BBcond);
 

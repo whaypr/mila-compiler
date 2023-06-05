@@ -683,11 +683,19 @@ std::unique_ptr<ForASTNode> Descent::FOR_STATEMENT()
         std::string ident = lexer.identifierStr();
         match(tok_identifier);
         match(tok_assign);
-        auto init = std::make_unique<AssignASTNode>( std::make_unique<DeclRefASTNode>(ident), EXPRESSION() );
-        match(tok_to);
+        auto init = std::make_unique<AssignASTNode>(std::make_unique<DeclRefASTNode>(ident), EXPRESSION());
+
+        bool isTo = true;
+        if (lookahead == tok_to) { // hack to enable "downto" option without changing the grammar
+            match(tok_to);
+        } else {
+            match(tok_downto);
+            isTo = false;
+        }
+
         auto to = EXPRESSION();
         match(tok_do);
-        return std::make_unique<ForASTNode>(std::move(init), std::move(to), STATEMENT() );
+        return std::make_unique<ForASTNode>(std::move(init), std::move(to), STATEMENT(), isTo );
     }
     default:
         throw ParserError("Parser error in FOR_STATEMENT");
@@ -742,6 +750,7 @@ std::unique_ptr<ExprASTNode> Descent::EXPRESSION_I( std::unique_ptr<ExprASTNode>
     case tok_then:
     case tok_do:
     case tok_to:
+    case tok_downto: // hack - not in the grammar
     case tok_rparen:
     case tok_comma:
     case tok_else:
@@ -824,6 +833,7 @@ std::unique_ptr<ExprASTNode> Descent::SIMPLE_EXPRESSION_I( std::unique_ptr<ExprA
     case tok_then:
     case tok_do:
     case tok_to:
+    case tok_downto: // hack - not in the grammar
     case tok_rparen:
     case tok_comma:
     case tok_else:
@@ -900,6 +910,7 @@ std::unique_ptr<ExprASTNode> Descent::TERM_I( std::unique_ptr<ExprASTNode> lhs )
     case tok_then:
     case tok_do:
     case tok_to:
+    case tok_downto: // hack - not in the grammar
     case tok_rparen:
     case tok_semicolon:
     case tok_comma:
@@ -1043,6 +1054,7 @@ std::unique_ptr<ExprASTNode> Descent::FACTOR_I( std::string ident )
     case tok_star:
     case tok_then:
     case tok_to:
+    case tok_downto: // hack - not in the grammar
         if (DECOMP_INFO) std::cout << "rule 96: FACTOR_I ⟶ ε" << std::endl;
         return std::make_unique<DeclRefASTNode>(ident);
     default:

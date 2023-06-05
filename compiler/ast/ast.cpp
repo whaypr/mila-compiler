@@ -77,10 +77,11 @@ WhileASTNode::WhileASTNode(std::unique_ptr<ExprASTNode> cond, std::unique_ptr<St
 {
 }
 
-ForASTNode::ForASTNode(std::unique_ptr<AssignASTNode> init, std::unique_ptr<ExprASTNode> to, std::unique_ptr<StatementASTNode> body)
+ForASTNode::ForASTNode(std::unique_ptr<AssignASTNode> init, std::unique_ptr<ExprASTNode> to, std::unique_ptr<StatementASTNode> body, bool isTo)
     : m_init(std::move(init))
     , m_to(std::move(to))
     , m_body(std::move(body))
+    , isTo(isTo)
 {
 }
 
