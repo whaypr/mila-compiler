@@ -20,16 +20,21 @@ std::map<std::string, Token> Lexer::keywords = {
     {"var", tok_var},
     {"integer", tok_integer},
     {"real", tok_real},
+    {"string", tok_string},
     {"if", tok_if},
     {"then", tok_then},
     {"else", tok_else},
     {"while", tok_while},
     {"for", tok_for},
     {"do", tok_do},
+    {"not", tok_not},
     {"div", tok_div},
     {"mod", tok_mod},
     {"and", tok_and},
     {"or", tok_or},
+    {"xor", tok_or},
+    {"to", tok_to},
+    {"downto", tok_downto},
 };
 
 
