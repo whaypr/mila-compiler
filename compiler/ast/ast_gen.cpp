@@ -209,7 +209,7 @@ llvm::Value* IfASTNode::codegen(GenContext& gen) const
 
     gen.builder.SetInsertPoint(BBelseBody);
     if (m_elseBody) {
-        m_body->codegen(gen);
+        m_elseBody->codegen(gen);
     }
     gen.builder.CreateBr(BBafter);
 
