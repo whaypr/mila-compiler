@@ -49,21 +49,78 @@ llvm::Value* BinOpASTNode::codegen(GenContext& gen) const
     };
 
     switch (m_op) {
-    case Token::tok_plus:
-        if (dblArith)
-            return gen.builder.CreateFAdd(maybeSIToFP(lhs), maybeSIToFP(rhs), "add");
-        else
-            return gen.builder.CreateAdd(lhs, rhs, "add");
-    case Token::tok_div: // originally SLASH
-        if (dblArith)
-            return gen.builder.CreateFDiv(maybeSIToFP(lhs), maybeSIToFP(rhs), "div");
-        else
-            return gen.builder.CreateSDiv(lhs, rhs, "div");
     case Token::tok_equal: // originally EQ
         if (dblArith)
             return gen.builder.CreateFCmpOEQ(maybeSIToFP(lhs), maybeSIToFP(rhs), "eq");
         else
             return gen.builder.CreateICmpEQ(lhs, rhs, "eq");
+    case Token::tok_notequal:
+        if (dblArith)
+            return gen.builder.CreateFCmpONE(maybeSIToFP(lhs), maybeSIToFP(rhs), "neq");
+        else
+            return gen.builder.CreateICmpNE(lhs, rhs, "neq");
+    case Token::tok_lt:
+        if (dblArith)
+            return gen.builder.CreateFCmpOLT(maybeSIToFP(lhs), maybeSIToFP(rhs), "lt");
+        else
+            return gen.builder.CreateICmpSLT(lhs, rhs, "lt");
+    case Token::tok_gt:
+        if (dblArith)
+            return gen.builder.CreateFCmpOGT(maybeSIToFP(lhs), maybeSIToFP(rhs), "gt");
+        else
+            return gen.builder.CreateICmpSGT(lhs, rhs, "gt");
+    case Token::tok_le:
+        if (dblArith)
+            return gen.builder.CreateFCmpOLE(maybeSIToFP(lhs), maybeSIToFP(rhs), "le");
+        else
+            return gen.builder.CreateICmpSLE(lhs, rhs, "le");
+    case Token::tok_ge:
+        if (dblArith)
+            return gen.builder.CreateFCmpOGE(maybeSIToFP(lhs), maybeSIToFP(rhs), "ge");
+        else
+            return gen.builder.CreateICmpSGE(lhs, rhs, "ge");
+    //-----
+    case Token::tok_plus:
+        if (dblArith)
+            return gen.builder.CreateFAdd(maybeSIToFP(lhs), maybeSIToFP(rhs), "add");
+        else
+            return gen.builder.CreateAdd(lhs, rhs, "add");
+    case Token::tok_minus:
+        if (dblArith)
+            return gen.builder.CreateFSub(maybeSIToFP(lhs), maybeSIToFP(rhs), "sub");
+        else
+            return gen.builder.CreateSub(lhs, rhs, "sub");
+    case Token::tok_star:
+        if (dblArith)
+            return gen.builder.CreateFMul(maybeSIToFP(lhs), maybeSIToFP(rhs), "mul");
+        else
+            return gen.builder.CreateMul(lhs, rhs, "mul");
+    case Token::tok_div: // originally SLASH
+        if (dblArith)
+            return gen.builder.CreateFDiv(maybeSIToFP(lhs), maybeSIToFP(rhs), "div");
+        else
+            return gen.builder.CreateSDiv(lhs, rhs, "div");
+    case Token::tok_mod:
+        if (dblArith)
+            return gen.builder.CreateFRem(maybeSIToFP(lhs), maybeSIToFP(rhs), "mod");
+        else
+            return gen.builder.CreateSRem(lhs, rhs, "mod");
+    //-----
+    case Token::tok_or:
+        if (dblArith)
+            throw "unsupported";
+        else
+            return gen.builder.CreateLogicalOr(lhs, rhs, "or");
+    case Token::tok_and:
+        if (dblArith)
+            throw "unsupported";
+        else
+            return gen.builder.CreateLogicalAnd(lhs, rhs, "and");
+    case Token::tok_xor:
+        if (dblArith)
+            throw "unsupported";
+        else
+            return gen.builder.CreateXor(lhs, rhs, "xor");
     default:
         throw "unimplemented";
     }
