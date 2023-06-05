@@ -227,6 +227,8 @@ llvm::Value* WhileASTNode::codegen(GenContext& gen) const
     llvm::BasicBlock* BBbody = llvm::BasicBlock::Create(gen.ctx, "body", parent);
     llvm::BasicBlock* BBafter = llvm::BasicBlock::Create(gen.ctx, "after", parent);
 
+    gen.builder.CreateBr(BBcond);
+
     gen.builder.SetInsertPoint(BBcond);
     auto cond = m_cond->codegen(gen);
     gen.builder.CreateCondBr(cond, BBbody, BBafter);
