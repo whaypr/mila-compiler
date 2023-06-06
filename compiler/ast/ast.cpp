@@ -41,6 +41,11 @@ FunCallASTNode::FunCallASTNode(std::string func, std::vector<std::unique_ptr<Exp
 
 StatementASTNode::~StatementASTNode() = default;
 
+BlockASTNode::BlockASTNode(std::vector<std::unique_ptr<StatementASTNode>> statements)
+    : m_statements(std::move(statements))
+{
+}
+
 CompoundStmtASTNode::CompoundStmtASTNode(std::vector<std::unique_ptr<StatementASTNode>> statements)
     : m_statements(std::move(statements))
 {
@@ -55,6 +60,21 @@ VarDeclASTNode::VarDeclASTNode(std::string var, std::unique_ptr<TypeASTNode> typ
 ConstDefASTNode::ConstDefASTNode(std::string _const, std::unique_ptr<LiteralASTNode> val)
     : m_const(std::move(_const))
     , m_val(std::move(val))
+{
+}
+
+ProcDeclASTNode::ProcDeclASTNode(std::string name, std::vector<std::unique_ptr<VarDeclASTNode>> params, std::unique_ptr<BlockASTNode> block)
+    : m_name(std::move(name))
+    , m_params(std::move(params))
+    , m_block(std::move(block))
+{
+}
+
+FunDeclASTNode::FunDeclASTNode(std::string name, std::vector<std::unique_ptr<VarDeclASTNode>> params, std::unique_ptr<BlockASTNode> block, std::unique_ptr<TypeASTNode> retType)
+    : m_name(std::move(name))
+    , m_params(std::move(params))
+    , m_block(std::move(block))
+    , m_retType(std::move(retType))
 {
 }
 
@@ -100,8 +120,8 @@ EmptyStmtASTNode::EmptyStmtASTNode()
 {
 }
 
-ProgramASTNode::ProgramASTNode(std::vector<std::unique_ptr<StatementASTNode>> statements)
-    : m_statements(std::move(statements))
+ProgramASTNode::ProgramASTNode(std::unique_ptr<BlockASTNode> block)
+    : m_block(std::move(block))
 {
 }
 

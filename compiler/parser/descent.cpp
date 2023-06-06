@@ -30,17 +30,17 @@ std::unique_ptr<ProgramASTNode> Descent::PROGRAM()
         match(tok_program);
         match(tok_identifier); // program name - useless
         match(tok_semicolon);
-        std::vector<std::unique_ptr<StatementASTNode>> statements = BLOCK();
+        auto block = BLOCK();
         match(tok_dot);
 
-        return std::make_unique<ProgramASTNode>(std::move(statements));
+        return std::make_unique<ProgramASTNode>(std::move(block));
     }
     default:
         throw ParserError("Parser error in PROGRAM");
     }
 }
 
-std::vector<std::unique_ptr<StatementASTNode>> Descent::BLOCK()
+std::unique_ptr<BlockASTNode> Descent::BLOCK()
 {
     switch(lookahead) {
     case tok_const:
@@ -53,7 +53,7 @@ std::vector<std::unique_ptr<StatementASTNode>> Descent::BLOCK()
         BLOCK_I(statements);
         auto followingStatement = COMPOUND_STATEMENT();
         statements.push_back(std::unique_ptr<StatementASTNode>(std::move(followingStatement)));
-        return statements;
+        return std::make_unique<BlockASTNode>(std::move(statements));
     }
     default:
         throw ParserError("Parser error in BLOCK");
@@ -332,141 +332,156 @@ void Descent::PROCEDURE_AND_FUNCTION_DECLARATION_PART( std::vector<std::unique_p
     case tok_procedure:
     case tok_function:
         if (DECOMP_INFO) std::cout << "rule 31: PROCEDURE_AND_FUNCTION_DECLARATION_PART ⟶ PROCEDURE_OR_FUNCTION_DECLARATION semi" << std::endl;
-        PROCEDURE_OR_FUNCTION_DECLARATION();
+        PROCEDURE_OR_FUNCTION_DECLARATION(statements);
         match(tok_semicolon);
-        return; // TODO
+        break;
     default:
         throw ParserError("Parser error in PROCEDURE_AND_FUNCTION_DECLARATION_PART");
     }
 }
 
-void Descent::PROCEDURE_OR_FUNCTION_DECLARATION()
+void Descent::PROCEDURE_OR_FUNCTION_DECLARATION( std::vector<std::unique_ptr<StatementASTNode>> &statements )
 {
     switch(lookahead) {
     case tok_procedure:
         if (DECOMP_INFO) std::cout << "rule 32: PROCEDURE_OR_FUNCTION_DECLARATION ⟶ PROCEDURE_DECLARATION" << std::endl;
-        PROCEDURE_DECLARATION();
-        return; // TODO
+        PROCEDURE_DECLARATION(statements);
+        break;
     case tok_function:
         if (DECOMP_INFO) std::cout << "rule 33: PROCEDURE_OR_FUNCTION_DECLARATION ⟶ FUNCTION_DECLARATION" << std::endl;
-        FUNCTION_DECLARATION();
-        return; // TODO
+        FUNCTION_DECLARATION(statements);
+        break;
     default:
         throw ParserError("Parser error in PROCEDURE_OR_FUNCTION_DECLARATION");
     }
 }
 
-void Descent::PROCEDURE_DECLARATION()
+void Descent::PROCEDURE_DECLARATION( std::vector<std::unique_ptr<StatementASTNode>> &statements )
 {
     switch(lookahead) {
-    case tok_procedure:
+    case tok_procedure: {
         if (DECOMP_INFO) std::cout << "rule 34: PROCEDURE_DECLARATION ⟶ procedure ident FORMAL_PARAMETER_LIST_OPT semi FORWARD_OR_BLOCK" << std::endl;
         match(tok_procedure);
+        std::string ident = lexer.identifierStr();
         match(tok_identifier);
-        FORMAL_PARAMETER_LIST_OPT();
+        auto params = FORMAL_PARAMETER_LIST_OPT();
         match(tok_semicolon);
-        FORWARD_OR_BLOCK();
-        return; // TODO
+        auto block = FORWARD_OR_BLOCK();
+
+        statements.push_back( std::make_unique<ProcDeclASTNode>(ident, std::move(params), std::move(block)) );
+        break;
+    }
     default:
         throw ParserError("Parser error in PROCEDURE_DECLARATION");
     }
 }
 
-void Descent::FORMAL_PARAMETER_LIST_OPT()
+std::vector<std::unique_ptr<VarDeclASTNode>> Descent::FORMAL_PARAMETER_LIST_OPT()
 {
     switch(lookahead) {
     case tok_lparen:
         if (DECOMP_INFO) std::cout << "rule 35: FORMAL_PARAMETER_LIST_OPT ⟶ FORMAL_PARAMETER_LIST" << std::endl;
-        FORMAL_PARAMETER_LIST();
-        return; // TODO
+        return FORMAL_PARAMETER_LIST();
     case tok_semicolon:
     case tok_colon:
         if (DECOMP_INFO) std::cout << "rule 36: FORMAL_PARAMETER_LIST_OPT ⟶ ε" << std::endl;
-        return; // TODO
+        return std::vector<std::unique_ptr<VarDeclASTNode>>();
     default:
         throw ParserError("Parser error in FORMAL_PARAMETER_LIST_OPT");
     }
 }
 
-void Descent::FORMAL_PARAMETER_LIST()
+std::vector<std::unique_ptr<VarDeclASTNode>> Descent::FORMAL_PARAMETER_LIST()
 {
     switch(lookahead) {
-    case tok_lparen:
+    case tok_lparen: {
         if (DECOMP_INFO) std::cout << "rule 37: FORMAL_PARAMETER_LIST ⟶ lparen PARAMETER_GROUP FORMAL_PARAMETER_LIST_I rparen" << std::endl;
         match(tok_lparen);
-        PARAMETER_GROUP();
-        FORMAL_PARAMETER_LIST_I();
+
+        std::vector<std::unique_ptr<VarDeclASTNode>> parameters;
+        PARAMETER_GROUP(parameters);
+        FORMAL_PARAMETER_LIST_I(parameters);
         match(tok_rparen);
-        return; // TODO
+        return parameters;
+    }
     default:
         throw ParserError("Parser error in FORMAL_PARAMETER_LIST");
     }
 }
 
-void Descent::FORMAL_PARAMETER_LIST_I()
+void Descent::FORMAL_PARAMETER_LIST_I( std::vector<std::unique_ptr<VarDeclASTNode>> &parameters )
 {
     switch(lookahead) {
     case tok_semicolon:
         if (DECOMP_INFO) std::cout << "rule 38: FORMAL_PARAMETER_LIST_I ⟶ semi PARAMETER_GROUP FORMAL_PARAMETER_LIST_I" << std::endl;
         match(tok_semicolon);
-        PARAMETER_GROUP();
-        FORMAL_PARAMETER_LIST_I();
-        return; // TODO
+        PARAMETER_GROUP(parameters);
+        FORMAL_PARAMETER_LIST_I(parameters);
+        break;
     case tok_rparen:
         if (DECOMP_INFO) std::cout << "rule 39: FORMAL_PARAMETER_LIST_I ⟶ ε" << std::endl;
-        return; // TODO
+        break;
     default:
         throw ParserError("Parser error in FORMAL_PARAMETER_LIST_I");
     }
 }
 
-void Descent::PARAMETER_GROUP()
+void Descent::PARAMETER_GROUP( std::vector<std::unique_ptr<VarDeclASTNode>> &parameters )
 {
     switch(lookahead) {
-    case tok_identifier:
+    case tok_identifier: {
         if (DECOMP_INFO) std::cout << "rule 40: PARAMETER_GROUP ⟶ IDENTIFIER_LIST colon TYPE_IDENTIFIER" << std::endl;
-        IDENTIFIER_LIST();
+        auto identifiers = IDENTIFIER_LIST();
         match(tok_colon);
-        TYPE_IDENTIFIER();
-        return; // TODO
+        TypeASTNode::Type type = TYPE_IDENTIFIER();
+
+        for ( const auto & ident : identifiers ) {
+            auto typeNode = std::make_unique<TypeASTNode>(type);
+            parameters.push_back( std::make_unique<VarDeclASTNode>(ident, std::move(typeNode)) );
+        }
+        break;
+    }
     default:
         throw ParserError("Parser error in PARAMETER_GROUP");
     }
 }
 
-void Descent::FORWARD_OR_BLOCK()
+std::unique_ptr<BlockASTNode> Descent::FORWARD_OR_BLOCK()
 {
     switch(lookahead) {
     case tok_forward:
         if (DECOMP_INFO) std::cout << "rule 41: FORWARD_OR_BLOCK ⟶ forward" << std::endl;
         match(tok_forward);
-        return; // TODO
+        return nullptr; // TODO
     case tok_begin:
     case tok_const:
     case tok_function:
     case tok_procedure:
     case tok_var:
         if (DECOMP_INFO) std::cout << "rule 42: FORWARD_OR_BLOCK ⟶ BLOCK" << std::endl;
-        BLOCK();
-        return; // TODO
+        return BLOCK();
     default:
         throw ParserError("Parser error in FORWARD");
     }
 }
 
-void Descent::FUNCTION_DECLARATION()
+void Descent::FUNCTION_DECLARATION( std::vector<std::unique_ptr<StatementASTNode>> &statements )
 {
     switch(lookahead) {
-    case tok_function:
+    case tok_function: {
         if (DECOMP_INFO) std::cout << "rule 43: FUNCTION_DECLARATION ⟶ function ident FORMAL_PARAMETER_LIST_OPT colon TYPE_IDENTIFIER semi FORWARD_OR_BLOCK" << std::endl;
         match(tok_function);
+        std::string ident = lexer.identifierStr();
         match(tok_identifier);
-        FORMAL_PARAMETER_LIST_OPT();
+        auto params = FORMAL_PARAMETER_LIST_OPT();
         match(tok_colon);
-        TYPE_IDENTIFIER();
+        auto type = TYPE_IDENTIFIER();
         match(tok_semicolon);
-        FORWARD_OR_BLOCK();
-        return; // TODO
+        auto block = FORWARD_OR_BLOCK();
+
+        statements.push_back( std::make_unique<FunDeclASTNode>(ident, std::move(params), std::move(block), std::make_unique<TypeASTNode>(type)) );
+        break;
+    }
     default:
         throw ParserError("Parser error in FUNCTION_DECLARATION");
     }

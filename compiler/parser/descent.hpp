@@ -15,7 +15,7 @@ public:
     Token match(Token tok);
 
     std::unique_ptr<ProgramASTNode> PROGRAM();
-    std::vector<std::unique_ptr<StatementASTNode>> BLOCK();
+    std::unique_ptr<BlockASTNode> BLOCK();
     void BLOCK_I( std::vector<std::unique_ptr<StatementASTNode>> &statements );
     void CONSTANT_DEFINITION( std::vector<std::unique_ptr<StatementASTNode>> &statements );
     void CONSTANT_DEFINITION_I( std::vector<std::unique_ptr<StatementASTNode>> &statements );
@@ -28,17 +28,16 @@ public:
     void VARIABLE_DECLARATION( std::vector<std::unique_ptr<StatementASTNode>> &statements );
     std::vector<std::string> IDENTIFIER_LIST();
     void IDENTIFIER_LIST_I( std::vector<std::string> &identificators );
-    std::unique_ptr<TypeASTNode> TYPE_IDENTIFIER();
-/**/    void PROCEDURE_AND_FUNCTION_DECLARATION_PART( std::vector<std::unique_ptr<StatementASTNode>> &statements );
-/**/    void PROCEDURE_OR_FUNCTION_DECLARATION();
-/**/    void PROCEDURE_DECLARATION();
     TypeASTNode::Type TYPE_IDENTIFIER();
-/**/    void FORMAL_PARAMETER_LIST_OPT();
-/**/    void FORMAL_PARAMETER_LIST();
-/**/    void FORMAL_PARAMETER_LIST_I();
-/**/    void PARAMETER_GROUP();
-/**/    void FORWARD_OR_BLOCK();
-/**/    void FUNCTION_DECLARATION();
+    void PROCEDURE_AND_FUNCTION_DECLARATION_PART( std::vector<std::unique_ptr<StatementASTNode>> &statements );
+    void PROCEDURE_OR_FUNCTION_DECLARATION( std::vector<std::unique_ptr<StatementASTNode>> &statements );
+    void PROCEDURE_DECLARATION( std::vector<std::unique_ptr<StatementASTNode>> &statements );
+    std::vector<std::unique_ptr<VarDeclASTNode>> FORMAL_PARAMETER_LIST_OPT();
+    std::vector<std::unique_ptr<VarDeclASTNode>> FORMAL_PARAMETER_LIST();
+    void FORMAL_PARAMETER_LIST_I( std::vector<std::unique_ptr<VarDeclASTNode>> &parameters );
+    void PARAMETER_GROUP( std::vector<std::unique_ptr<VarDeclASTNode>> &parameters );
+    std::unique_ptr<BlockASTNode> FORWARD_OR_BLOCK();
+    void FUNCTION_DECLARATION( std::vector<std::unique_ptr<StatementASTNode>> &statements );
     std::unique_ptr<StatementASTNode> STATEMENT();
     std::unique_ptr<StatementASTNode> SIMPLE_STATEMENT();
     std::unique_ptr<StatementASTNode> SIMPLE_STATEMENT_L( std::string ident );

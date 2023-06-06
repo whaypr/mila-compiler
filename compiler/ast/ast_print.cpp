@@ -68,6 +68,14 @@ void FunCallASTNode::print(std::ostream& os, unsigned indent) const
         arg->print(os, indent + 1);
 }
 
+void BlockASTNode::print(std::ostream& os, unsigned indent) const
+{
+    MKINDENT;
+    os << "Block" << std::endl;
+    for (const auto& s : m_statements)
+        s->print(os, indent + 1);
+}
+
 void CompoundStmtASTNode::print(std::ostream& os, unsigned indent) const
 {
     MKINDENT;
@@ -91,6 +99,27 @@ void ConstDefASTNode::print(std::ostream& os, unsigned indent) const
     MKINDENT;
     os << "ConstDef " << m_const << std::endl;
     m_type->print(os, indent + 1);
+}
+
+void ProcDeclASTNode::print(std::ostream& os, unsigned indent) const
+{
+    MKINDENT;
+    os << "ProcDecl " << m_name << std::endl;
+
+    for (const auto& arg : m_params)
+        arg->print(os, indent + 1);
+    m_block->print(os, indent + 1);
+}
+
+void FunDeclASTNode::print(std::ostream& os, unsigned indent) const
+{
+    MKINDENT;
+    os << "FunDecl " << m_name << std::endl;
+
+    for (const auto& arg : m_params)
+        arg->print(os, indent + 1);
+    m_retType->print(os, indent + 1);
+    m_block->print(os, indent + 1);
 }
 
 void AssignASTNode::print(std::ostream& os, unsigned indent) const
@@ -159,6 +188,5 @@ void ProgramASTNode::print(std::ostream& os, unsigned indent) const
 {
     MKINDENT;
     os << "Program" << std::endl;
-    for (const auto& s : m_statements)
-        s->print(os, indent + 1);
+    m_block->print(os, indent + 1);
 }

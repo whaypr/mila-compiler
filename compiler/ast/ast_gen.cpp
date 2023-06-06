@@ -3,6 +3,7 @@
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Value.h>
 #include <ostream>
+#include <map>
 
 #include "ast.hpp"
 
@@ -149,6 +150,18 @@ llvm::Value* UnaryOpASTNode::codegen(GenContext& gen) const
     }
 }
 
+llvm::Value* ProcDeclASTNode::codegen(GenContext& gen) const
+{
+    // TODO
+    return nullptr;
+}
+
+llvm::Value* FunDeclASTNode::codegen(GenContext& gen) const
+{
+    // TODO
+    return nullptr;
+}
+
 llvm::Value* AssignASTNode::codegen(GenContext& gen) const
 {
     auto* store = m_var->getStore(gen);
@@ -200,6 +213,25 @@ llvm::Value* FunCallASTNode::codegen(GenContext& gen) const
         args.emplace_back(arg->codegen(gen));
 
     return gen.builder.CreateCall(func, args);
+}
+
+llvm::Value* BlockASTNode::codegen(GenContext& gen) const
+{
+    auto parent = gen.builder.GetInsertBlock()->getParent();
+    assert(parent);
+
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(gen.ctx, "block", parent);
+
+    gen.builder.CreateBr(BB);
+    gen.builder.SetInsertPoint(BB);
+
+    std::map<std::string, Symbol> symbolTableCopy = gen.symbolTable;
+    for (const auto& s : m_statements) {
+        s->codegen(gen);
+    }
+    gen.symbolTable = symbolTableCopy;
+
+    return nullptr;
 }
 
 llvm::Value* CompoundStmtASTNode::codegen(GenContext& gen) const
@@ -353,8 +385,10 @@ llvm::Value* ProcCallASTNode::codegen(GenContext& gen) const
     auto* proc = gen.module.getFunction(m_proc);
     assert(proc);
 
-    std::vector<llvm::Value*> args;
-    if (m_proc != "readln" && m_proc != "dec") {
+    std::vector<llvm::Value *> args;
+    if (m_proc == "exit") {
+        gen.builder.CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(gen.ctx), 42));
+    } else if (m_proc != "readln" && m_proc != "dec") {
         for (const auto& arg : m_args)
             args.emplace_back(arg->codegen(gen));
     } else {
@@ -411,9 +445,7 @@ llvm::Value* ProgramASTNode::codegen(GenContext& gen) const
     llvm::BasicBlock* BB = llvm::BasicBlock::Create(gen.ctx, "entry", fMain);
     gen.builder.SetInsertPoint(BB);
 
-    for (const auto& s : m_statements) {
-        s->codegen(gen);
-    }
+    m_block->codegen(gen);
 
     gen.builder.CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(gen.ctx), 42));
 

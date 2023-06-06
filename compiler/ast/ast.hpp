@@ -125,6 +125,16 @@ public:
     virtual ~StatementASTNode();
 };
 
+// block statement
+class BlockASTNode : public StatementASTNode {
+    std::vector<std::unique_ptr<StatementASTNode>> m_statements;
+    
+public:
+    BlockASTNode(std::vector<std::unique_ptr<StatementASTNode>> statements);
+    void print(std::ostream& os, unsigned indent = 0) const override;
+    llvm::Value* codegen(GenContext& gen) const override;
+};
+
 // compound statement
 class CompoundStmtASTNode : public StatementASTNode {
     std::vector<std::unique_ptr<StatementASTNode>> m_statements;
@@ -155,6 +165,31 @@ class ConstDefASTNode : public StatementASTNode {
 
 public:
     ConstDefASTNode(std::string _const, std::unique_ptr<LiteralASTNode> val);
+    void print(std::ostream& os, unsigned indent = 0) const override;
+    llvm::Value* codegen(GenContext& gen) const override;
+};
+
+// procedure declaration
+class ProcDeclASTNode : public StatementASTNode {
+    std::string m_name;
+    std::vector<std::unique_ptr<VarDeclASTNode>> m_params;
+    std::unique_ptr<BlockASTNode> m_block;
+
+public:
+    ProcDeclASTNode(std::string name, std::vector<std::unique_ptr<VarDeclASTNode>> params, std::unique_ptr<BlockASTNode> block);
+    void print(std::ostream& os, unsigned indent = 0) const override;
+    llvm::Value* codegen(GenContext& gen) const override;
+};
+
+// function declaration
+class FunDeclASTNode : public StatementASTNode {
+    std::string m_name;
+    std::vector<std::unique_ptr<VarDeclASTNode>> m_params;
+    std::unique_ptr<TypeASTNode> m_retType;
+    std::unique_ptr<BlockASTNode> m_block;
+
+public:
+    FunDeclASTNode(std::string name, std::vector<std::unique_ptr<VarDeclASTNode>> params, std::unique_ptr<BlockASTNode> block, std::unique_ptr<TypeASTNode> retType);
     void print(std::ostream& os, unsigned indent = 0) const override;
     llvm::Value* codegen(GenContext& gen) const override;
 };
@@ -241,10 +276,10 @@ public:
 
 //-----------------------------------------------------------------------
 class ProgramASTNode : public ASTNode {
-    std::vector<std::unique_ptr<StatementASTNode>> m_statements;
+    std::unique_ptr<BlockASTNode> m_block;
 
 public:
-    ProgramASTNode(std::vector<std::unique_ptr<StatementASTNode>> statements);
+    ProgramASTNode(std::unique_ptr<BlockASTNode> block);
     void print(std::ostream& os, unsigned indent = 0) const override;
     llvm::Value* codegen(GenContext& gen) const override;
 };
