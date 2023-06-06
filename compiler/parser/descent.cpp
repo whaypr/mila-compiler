@@ -12,6 +12,7 @@
 Token Descent::match( Token tok ) {
     if (lookahead != tok)
         throw ParserError("Parser error in MATCH");
+    if (DECOMP_INFO) std::cout << "match " << tok << std::endl;
     return lookahead = lexer.nextToken();
 }
 

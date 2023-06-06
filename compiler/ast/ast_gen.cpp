@@ -238,19 +238,10 @@ llvm::Value* CompoundStmtASTNode::codegen(GenContext& gen) const
 {
     auto parent = gen.builder.GetInsertBlock()->getParent();
     assert(parent);
-    
-    llvm::BasicBlock* BB = llvm::BasicBlock::Create(gen.ctx, "statement", parent);
-    llvm::BasicBlock* BBafter = llvm::BasicBlock::Create(gen.ctx, "after", parent);
-
-    gen.builder.CreateBr(BB);
-    gen.builder.SetInsertPoint(BB);
 
     for (const auto& s : m_statements) {
         s->codegen(gen);
     }
-    gen.builder.CreateBr(BBafter);
-
-    gen.builder.SetInsertPoint(BBafter);
 
     return nullptr;
 }
