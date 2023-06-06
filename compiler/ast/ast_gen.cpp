@@ -441,6 +441,14 @@ llvm::Value* ProgramASTNode::codegen(GenContext& gen) const
             false);
         llvm::Function::Create(ft, llvm::Function::ExternalLinkage, "dec", gen.module);
     }
+    // create exit function
+    {
+        llvm::FunctionType* ft = llvm::FunctionType::get(
+            llvm::Type::getVoidTy(gen.ctx),
+            {llvm::Type::getInt32Ty(gen.ctx)},
+            false);
+        llvm::Function::Create(ft, llvm::Function::ExternalLinkage, "exit", gen.module);
+    }
 
     llvm::BasicBlock* BB = llvm::BasicBlock::Create(gen.ctx, "entry", fMain);
     gen.builder.SetInsertPoint(BB);

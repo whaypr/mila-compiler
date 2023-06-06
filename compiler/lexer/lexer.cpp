@@ -13,7 +13,6 @@ std::map<std::string, Token> Lexer::keywords = {
     {"procedure", tok_procedure},
     {"function", tok_function},
     {"forward", tok_forward},
-    {"exit", tok_exit},
     {"begin", tok_begin},
     {"end", tok_end},
     {"const", tok_const},

@@ -494,7 +494,7 @@ std::unique_ptr<StatementASTNode> Descent::STATEMENT()
     case tok_end:
     case tok_identifier:
     case tok_semicolon:
-    case tok_exit:
+    case tok_exit: // dead - exit is an identificator
         if (DECOMP_INFO) std::cout << "rule 42: STATEMENT ⟶ SIMPLE_STATEMENT" << std::endl;
         return SIMPLE_STATEMENT();
     case tok_begin:
@@ -516,7 +516,7 @@ std::unique_ptr<StatementASTNode> Descent::SIMPLE_STATEMENT()
     case tok_semicolon:
         if (DECOMP_INFO) std::cout << "rule 44: SIMPLE_STATEMENT ⟶ EMPTY_STATEMENT" << std::endl;
         return EMPTY_STATEMENT();
-    case tok_exit:
+    case tok_exit: // dead - exit is an identificator
         if (DECOMP_INFO) std::cout << "rule 45: SIMPLE_STATEMENT ⟶ exit" << std::endl;
         match(tok_exit);
         return std::make_unique<ProcCallASTNode>("exit", std::vector<std::unique_ptr<ExprASTNode>>());
