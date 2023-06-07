@@ -1,11 +1,21 @@
 #include <cstddef>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/Value.h>
 #include <ostream>
 #include <map>
+#include <vector>
 
 #include "ast.hpp"
+
+
+static llvm::AllocaInst *CreateEntryBlockAlloca(llvm::Function *TheFunction, const std::string &VarName, GenContext& gen) {
+  llvm::IRBuilder<> TmpB(&TheFunction->getEntryBlock(), TheFunction->getEntryBlock().begin());
+  return TmpB.CreateAlloca(llvm::Type::getInt32Ty(gen.ctx), nullptr, VarName);
+}
 
 
 GenContext::GenContext(const std::string& moduleName)
@@ -152,13 +162,83 @@ llvm::Value* UnaryOpASTNode::codegen(GenContext& gen) const
 
 llvm::Value* ProcDeclASTNode::codegen(GenContext& gen) const
 {
-    // TODO
+    auto prevBB = gen.builder.GetInsertBlock();
+    auto symbolTableCopy = gen.symbolTable;
+
+    std::vector<llvm::Type *> params;
+    for (const auto &p : m_params) {
+        params.push_back( p->getTypeASTNode()->genType(gen) );
+    }
+
+    llvm::FunctionType* ft = llvm::FunctionType::get(
+        llvm::Type::getVoidTy(gen.ctx),
+        params,
+        false);
+    llvm::Function::Create(ft, llvm::Function::ExternalLinkage, m_name, gen.module);
+
+    auto func = gen.module.getFunction(m_name);
+
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(gen.ctx, "procedure", func);
+    gen.builder.SetInsertPoint(BB);
+
+    int i = 0;
+    for (auto &arg : func->args()) {
+        arg.setName(m_params[i]->getVarName());
+        llvm::AllocaInst *store = CreateEntryBlockAlloca(func, arg.getName().str(), gen);
+        gen.builder.CreateStore(&arg, store);
+        gen.symbolTable[arg.getName().str()] = {arg.getName().str(), m_params[i]->getTypeASTNode(), store};
+        i++;
+    }
+
+    m_block->codegen(gen);
+    gen.builder.CreateRetVoid();
+
+    gen.builder.SetInsertPoint(prevBB);
+    gen.symbolTable = symbolTableCopy;
+
     return nullptr;
 }
 
 llvm::Value* FunDeclASTNode::codegen(GenContext& gen) const
 {
-    // TODO
+    auto prevBB = gen.builder.GetInsertBlock();
+    auto symbolTableCopy = gen.symbolTable;
+    
+    std::vector<llvm::Type *> params;
+    for (const auto &p : m_params) {
+        params.push_back( p->getTypeASTNode()->genType(gen) );
+    }
+
+    llvm::FunctionType* ft = llvm::FunctionType::get(
+        m_retType->genType(gen),
+        params,
+        false);
+    llvm::Function::Create(ft, llvm::Function::ExternalLinkage, m_name, gen.module);
+
+    auto func = gen.module.getFunction(m_name);
+
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(gen.ctx, "function", func);
+    gen.builder.SetInsertPoint(BB);
+
+    int i = 0;
+    for (auto &arg : func->args()) {
+        arg.setName(m_params[i]->getVarName());
+        llvm::AllocaInst *store = CreateEntryBlockAlloca(func, arg.getName().str(), gen);
+        gen.builder.CreateStore(&arg, store);
+        gen.symbolTable[arg.getName().str()] = {arg.getName().str(), m_params[i]->getTypeASTNode(), store};
+        i++;
+    }
+
+    auto* store = gen.builder.CreateAlloca(m_retType->genType(gen), 0, m_name);
+    gen.symbolTable[m_name] = {m_name, m_retType.get(), store};
+
+    m_block->codegen(gen);
+    const auto& symbol = gen.symbolTable[m_name];
+    gen.builder.CreateRet( gen.builder.CreateLoad(symbol.type->genType(gen), symbol.store, m_name) );
+
+    gen.builder.SetInsertPoint(prevBB);
+    gen.symbolTable = symbolTableCopy;
+
     return nullptr;
 }
 
@@ -285,7 +365,7 @@ llvm::Value* ConstDefASTNode::codegen(GenContext& gen) const
 llvm::Value* IfASTNode::codegen(GenContext& gen) const
 {
     auto parent = gen.builder.GetInsertBlock()->getParent();
-    // assert(parent);
+    assert(parent);
 
     llvm::BasicBlock* BBbody = llvm::BasicBlock::Create(gen.ctx, "body", parent);
     llvm::BasicBlock* BBelseBody = llvm::BasicBlock::Create(gen.ctx, "elseBody", parent);

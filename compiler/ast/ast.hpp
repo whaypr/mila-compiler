@@ -154,7 +154,9 @@ class VarDeclASTNode : public StatementASTNode {
 public:
     VarDeclASTNode(std::string var, std::unique_ptr<TypeASTNode> type);
     void print(std::ostream& os, unsigned indent = 0) const override;
-    llvm::Value* codegen(GenContext& gen) const override;
+    llvm::Value *codegen(GenContext &gen) const override;
+    TypeASTNode *getTypeASTNode() { return m_type.get(); }
+    std::string getVarName() { return m_var; }
 };
 
 // constant definition
